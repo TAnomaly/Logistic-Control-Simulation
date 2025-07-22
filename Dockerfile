@@ -19,6 +19,24 @@ RUN npm run build
 # Production bağımlılıklarını yükle
 RUN npm ci --omit=dev --force && npm cache clean --force
 
+# Development stage
+FROM node:18-alpine AS development
+
+# İş dizinini ayarla
+WORKDIR /usr/src/app
+
+# Package dosyalarını kopyala
+COPY package*.json ./
+
+# Tüm bağımlılıkları yükle (dev dependencies dahil)
+RUN npm ci --force && npm cache clean --force
+
+# Port bilgisini belirle
+EXPOSE 3000
+
+# Development için start:dev komutu çalıştır
+CMD ["npm", "run", "start:dev"]
+
 # Production stage
 FROM node:18-alpine AS production
 

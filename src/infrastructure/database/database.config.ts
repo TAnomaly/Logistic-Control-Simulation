@@ -9,6 +9,22 @@ import { Gate } from '../../domain/entities/gate.entity';
  * Environment variable'ları kullanarak dinamik konfigürasyon sağlar
  */
 export const createTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOptions => {
+    // DATABASE_URL varsa onu kullan, yoksa ayrı ayrı parametreleri kullan
+    const databaseUrl = configService.get<string>('DATABASE_URL');
+
+    if (databaseUrl) {
+        return {
+            type: 'postgres',
+            url: databaseUrl,
+            ssl: false,
+            entities: [Shipment, TrackingEvent, Gate],
+            synchronize: configService.get<boolean>('DB_SYNC', false),
+            logging: configService.get<boolean>('DB_LOGGING', false),
+            extra: {
+                ssl: false
+            }
+        };
+    }
 
     return {
         type: 'postgres',
@@ -17,17 +33,9 @@ export const createTypeOrmConfig = (configService: ConfigService): TypeOrmModule
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'password'),
         database: configService.get<string>('DB_NAME', 'logistic_control'),
-
-        // Entity'lerin bulunduğu yerler
         entities: [Shipment, TrackingEvent, Gate],
-
-        // Development ortamında otomatik migration çalıştır
         synchronize: configService.get<boolean>('DB_SYNC', false),
-
-        // SQL query'lerini loglama (development için)
         logging: configService.get<boolean>('DB_LOGGING', false),
-
-        // Connection pool ayarları
         extra: {
             connectionLimit: 10,
             idleTimeoutMillis: 30000,

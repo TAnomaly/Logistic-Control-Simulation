@@ -1,6 +1,6 @@
-import { Controller, Post, Get, Body, Param, Query, HttpCode, HttpStatus, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { CreateShipmentDto } from '../../application/commands/create-shipment.command';
+import { CreateShipmentDto, CreateShipmentCommand } from '../../application/commands/create-shipment.command';
 import { GetShipmentByTrackingDto } from '../../application/queries/get-shipment-by-tracking.query';
 import { ShipmentTrackingDetailsDto } from '../../application/handlers/get-shipment-by-tracking.handler';
 import { Shipment } from '../../domain/entities/shipment.entity';
@@ -23,7 +23,7 @@ export class ShipmentController {
     @Post()
     @HttpCode(HttpStatus.CREATED)
     async createShipment(
-        @Body(ValidationPipe) createShipmentDto: CreateShipmentDto,
+        @Body() body: any,
     ): Promise<{
         success: boolean;
         data: {
@@ -34,8 +34,19 @@ export class ShipmentController {
         message: string;
     }> {
         try {
-            // DTO'yu command'e dönüştür ve command bus ile gönder
-            const command = createShipmentDto.toCommand();
+            // Direkt Command oluştur - toCommand() metodunu atla
+            const command = new CreateShipmentCommand(
+                body.senderName,
+                body.senderAddress,
+                body.receiverName,
+                body.receiverAddress,
+                body.weight,
+                body.length,
+                body.width,
+                body.height,
+                body.estimatedDeliveryDate,
+            );
+
             const shipment: Shipment = await this.commandBus.execute(command);
 
             return {
