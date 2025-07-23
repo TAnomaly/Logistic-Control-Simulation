@@ -861,3 +861,30 @@ Bu proje MIT lisansı altında yayınlanmıştır. Detaylar için `LICENSE` dosy
 ---
 
 **🎉 Bu dokümantasyon projenin tam olarak nasıl çalıştığını ve neden bu teknolojilerin seçildiğini açıklamaktadır. Her bölüm gerçek kod örnekleri ve pratik kullanım senaryoları içermektedir.** 
+
+## 2024 Gelişmeleri: Sürücü ve Görev Yönetimi
+
+### Driver (Sürücü) Yapısı
+- Her sürücü (driver) için ad, soyad, plaka, aktiflik, son konum ve son konum güncelleme zamanı tutulur.
+- Sürücüler API üzerinden eklenebilir, güncellenebilir ve konumları değiştirilebilir.
+
+### Assignment (Task/Görev) Yapısı
+- Planner, bir sürücüye görev atayabilir (ör: teslimat, pickup, transfer).
+- Her görevde görev tipi, atanan sürücü, ilgili gönderi, görev durumu ve açıklama bulunur.
+- Görevler API üzerinden atanabilir, listelenebilir ve durumları güncellenebilir.
+
+### Konum Takibi
+- Sürücüler, mobil uygulama veya başka bir istemci üzerinden konumlarını güncelleyebilir.
+- Planner, sürücünün son konumunu ve görevlerini API ile sorgulayabilir.
+
+### Mimari Entegrasyon
+- CQRS: Görev atama ve konum güncelleme işlemleri command olarak işlenir, sorgulamalar query ile yapılır.
+- Event-Driven: Görev atama ve durum değişiklikleri ileride event bus ile publish edilebilir.
+- Outbox Pattern: Event publish işlemleri için güvenilirlik sağlar (ileride görev eventleri için de kullanılabilir).
+- Redis Cache: Sık sorgulanan veri (ör. kapı listesi) Redis ile cache'lenir, performans artar.
+
+### Kullanım Senaryosu
+1. Planner yeni bir sürücü ekler.
+2. Planner, bir gönderi için görev oluşturur ve bir sürücüye atar.
+3. Sürücü, mobil uygulama ile konumunu günceller.
+4. Planner, sürücünün görevlerini ve anlık konumunu API ile izler. 

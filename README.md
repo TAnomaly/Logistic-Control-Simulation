@@ -147,6 +147,76 @@ GET /api/shipments/tracking/{trackingNumber}
 GET /api/shipments/health
 ```
 
+### Yeni Özellikler (2024)
+
+#### Sürücü (Driver) Yönetimi
+- Sürücü ekleme, güncelleme, silme, listeleme
+- Sürücüye ait plaka, aktiflik, son konum (latitude/longitude) ve son konum güncelleme zamanı
+
+#### Görev (Assignment/Task) Yönetimi
+- Planner tarafından sürücüye görev atama (teslimat, pickup, transfer, vs.)
+- Görev tipi, atanan sürücü, ilgili gönderi (shipment), görev durumu (ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED)
+- Görevlerin atanma zamanı ve açıklama alanı
+
+#### Konum Takibi
+- Sürücülerin anlık konumunu güncelleme ve sorgulama
+- Sürücünün görevlerini ve konumunu API ile görüntüleme
+
+### Yeni API Endpointleri
+
+#### Sürücü (Driver) API
+- `POST /api/drivers` - Sürücü oluştur
+- `GET /api/drivers` - Tüm sürücüleri listele
+- `GET /api/drivers/:id` - Sürücü detayını getir
+- `PUT /api/drivers/:id` - Sürücü bilgilerini güncelle
+- `PUT /api/drivers/:id/location` - Sürücünün konumunu güncelle
+
+#### Görev (Assignment) API
+- `POST /api/assignments` - Sürücüye görev ata
+- `GET /api/assignments` - Tüm görevleri listele
+- `GET /api/assignments/driver/:driverId` - Bir sürücünün görevlerini listele
+- `PUT /api/assignments/:id/status` - Görev durumunu güncelle
+
+#### Örnek Kullanım
+
+**Sürücü Oluşturma:**
+```http
+POST /api/drivers
+Content-Type: application/json
+{
+  "firstName": "Ali",
+  "lastName": "Veli",
+  "licensePlate": "34ABC123"
+}
+```
+
+**Sürücüye Görev Atama:**
+```http
+POST /api/assignments
+Content-Type: application/json
+{
+  "driverId": "<driver-uuid>",
+  "taskType": "DELIVERY",
+  "shipmentId": "<shipment-uuid>",
+  "description": "Ankara teslimatı"
+}
+```
+
+**Sürücü Konumunu Güncelleme:**
+```http
+PUT /api/drivers/<driver-uuid>/location
+Content-Type: application/json
+{
+  "latitude": 39.9334,
+  "longitude": 32.8597
+}
+```
+
+**Bir Sürücünün Görevlerini Listeleme:**
+```http
+GET /api/assignments/driver/<driver-uuid>
+```
+
 ## 📊 Lojistik Simülasyon Özellikleri
 
 ### Gönderi Takip Sistemi

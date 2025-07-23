@@ -153,6 +153,150 @@ if (pm.response.code === 201) {
 
 ---
 
+## 4. 🚗 Sürücü (Driver) API
+
+### Sürücü Oluşturma
+**Method:** `POST`
+**URL:** `{{base_url}}/api/drivers`
+**Headers:**
+- `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "firstName": "Ali",
+  "lastName": "Veli",
+  "licensePlate": "34ABC123"
+}
+```
+
+**Beklenen Response:**
+```json
+{
+  "id": "...",
+  "firstName": "Ali",
+  "lastName": "Veli",
+  "licensePlate": "34ABC123",
+  "isActive": true,
+  "lastLatitude": null,
+  "lastLongitude": null,
+  "lastLocationUpdate": null,
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+### Sürücü Konumunu Güncelleme
+**Method:** `PUT`
+**URL:** `{{base_url}}/api/drivers/{{driver_id}}/location`
+**Headers:**
+- `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "latitude": 39.9334,
+  "longitude": 32.8597
+}
+```
+
+**Beklenen Response:**
+```json
+{
+  "id": "...",
+  "firstName": "Ali",
+  "lastName": "Veli",
+  "licensePlate": "34ABC123",
+  "isActive": true,
+  "lastLatitude": 39.9334,
+  "lastLongitude": 32.8597,
+  "lastLocationUpdate": "...",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+---
+
+## 5. 📋 Görev (Assignment) API
+
+### Görev Atama
+**Method:** `POST`
+**URL:** `{{base_url}}/api/assignments`
+**Headers:**
+- `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "driverId": "{{driver_id}}",
+  "taskType": "DELIVERY",
+  "shipmentId": "{{shipment_id}}",
+  "description": "Ankara teslimatı"
+}
+```
+
+**Beklenen Response:**
+```json
+{
+  "id": "...",
+  "taskType": "DELIVERY",
+  "status": "ASSIGNED",
+  "assignedAt": "...",
+  "description": "Ankara teslimatı",
+  "createdAt": "...",
+  "updatedAt": "...",
+  "driver": { ... },
+  "shipment": { ... }
+}
+```
+
+### Bir Sürücünün Görevlerini Listeleme
+**Method:** `GET`
+**URL:** `{{base_url}}/api/assignments/driver/{{driver_id}}`
+
+**Beklenen Response:**
+```json
+[
+  {
+    "id": "...",
+    "taskType": "DELIVERY",
+    "status": "ASSIGNED",
+    "assignedAt": "...",
+    "description": "Ankara teslimatı",
+    "createdAt": "...",
+    "updatedAt": "...",
+    "driver": { ... },
+    "shipment": { ... }
+  }
+]
+```
+
+### Görev Durumunu Güncelleme
+**Method:** `PUT`
+**URL:** `{{base_url}}/api/assignments/{{assignment_id}}/status`
+**Headers:**
+- `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "status": "IN_PROGRESS"
+}
+```
+
+**Beklenen Response:**
+```json
+{
+  "id": "...",
+  "taskType": "DELIVERY",
+  "status": "IN_PROGRESS",
+  ...
+}
+```
+
+---
+
 ## 🧪 Test Senaryoları
 
 ### Senaryo 1: Başarılı İş Akışı

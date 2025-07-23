@@ -10,6 +10,8 @@ import { Shipment } from './domain/entities/shipment.entity';
 import { TrackingEvent } from './domain/entities/tracking-event.entity';
 import { Gate } from './domain/entities/gate.entity';
 import { OutboxEvent } from './domain/entities/outbox-event.entity';
+import { Driver } from './domain/entities/driver.entity';
+import { Assignment } from './domain/entities/assignment.entity';
 
 // Infrastructure
 import { createTypeOrmConfig } from './infrastructure/database/database.config';
@@ -30,6 +32,8 @@ import { ShipmentStatusUpdatedEventHandler } from './application/events/handlers
 import { ShipmentController } from './presentation/controllers/shipment.controller';
 import { GateController } from './presentation/controllers/gate.controller';
 import { TrackingEventController } from './presentation/controllers/tracking-event.controller';
+import { DriverController } from './presentation/controllers/driver.controller';
+import { AssignmentController } from './presentation/controllers/assignment.controller';
 
 /**
  * LogisticsModule - Lojistik kontrol simülasyon sistemi ana modülü
@@ -56,7 +60,7 @@ import { TrackingEventController } from './presentation/controllers/tracking-eve
         }),
 
         // Entity'leri bu modülde kullanmak için register et
-        TypeOrmModule.forFeature([Shipment, TrackingEvent, Gate, OutboxEvent]),
+        TypeOrmModule.forFeature([Shipment, TrackingEvent, Gate, OutboxEvent, Driver, Assignment]),
 
         // CQRS modülü - Command ve Query pattern'lerini destekler
         CqrsModule,
@@ -81,6 +85,8 @@ import { TrackingEventController } from './presentation/controllers/tracking-eve
         ShipmentController,
         GateController,
         TrackingEventController,
+        DriverController,
+        AssignmentController,
     ],
 
     providers: [
