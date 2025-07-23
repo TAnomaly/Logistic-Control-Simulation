@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Shipment } from '../../domain/entities/shipment.entity';
 import { TrackingEvent } from '../../domain/entities/tracking-event.entity';
 import { Gate } from '../../domain/entities/gate.entity';
+import { OutboxEvent } from '../../domain/entities/outbox-event.entity';
 
 /**
  * TypeORM veritabanı konfigürasyonu
@@ -17,7 +18,7 @@ export const createTypeOrmConfig = (configService: ConfigService): TypeOrmModule
             type: 'postgres',
             url: databaseUrl,
             ssl: false,
-            entities: [Shipment, TrackingEvent, Gate],
+            entities: [Shipment, TrackingEvent, Gate, OutboxEvent],
             synchronize: configService.get<boolean>('DB_SYNC', false),
             logging: configService.get<boolean>('DB_LOGGING', false),
             extra: {
@@ -33,7 +34,7 @@ export const createTypeOrmConfig = (configService: ConfigService): TypeOrmModule
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'password'),
         database: configService.get<string>('DB_NAME', 'logistic_control'),
-        entities: [Shipment, TrackingEvent, Gate],
+        entities: [Shipment, TrackingEvent, Gate, OutboxEvent],
         synchronize: configService.get<boolean>('DB_SYNC', false),
         logging: configService.get<boolean>('DB_LOGGING', false),
         extra: {

@@ -2,7 +2,6 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    platform: linux/arm64/v8
     container_name: logistic-postgres
     environment:
       POSTGRES_DB: logistic_control
@@ -23,7 +22,6 @@ services:
   # Redis Cache & Message Broker
   redis:
     image: redis:7-alpine
-    platform: linux/arm64/v8
     container_name: logistic-redis
     command: redis-server --appendonly yes --requirepass redis_password
     ports:
@@ -82,7 +80,6 @@ services:
   # PostgreSQL Admin Interface (pgAdmin)
   pgadmin:
     image: dpage/pgadmin4:latest
-    platform: linux/arm64/v8
     container_name: logistic-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@logistic.com
