@@ -8,6 +8,8 @@ import { CreateGateDto } from '../dtos/create-gate.dto';
 import { UpdateGateDto } from '../dtos/update-gate.dto';
 import { GateResponseDto } from '../dtos/gate-response.dto';
 import { PaginationDto } from '../dtos/pagination.dto';
+import { Cache } from '../../infrastructure/redis/cache.decorator';
+import { RedisService } from '../../infrastructure/redis/redis.service';
 
 /**
  * GateController - Gate (Kapı/Geçit) yönetimi için REST API endpoint'leri
@@ -20,6 +22,7 @@ export class GateController {
     constructor(
         private readonly commandBus: CommandBus,
         private readonly queryBus: QueryBus,
+        private readonly redisService: RedisService,
     ) { }
 
     /**
@@ -81,6 +84,7 @@ export class GateController {
      * GET /api/gates
      */
     @Get()
+    @Cache(300, 'gates')
     async getGates(@Query() paginationDto: PaginationDto): Promise<{
         gates: GateResponseDto[];
         total: number;
