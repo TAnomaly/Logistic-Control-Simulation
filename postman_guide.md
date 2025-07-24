@@ -295,6 +295,64 @@ if (pm.response.code === 201) {
 }
 ```
 
+### Görev Silme
+**Method:** `DELETE`
+**URL:** `{{base_url}}/api/assignments/{{assignment_id}}`
+
+**Beklenen Response:**
+```
+HTTP Status: 204
+```
+
+### Görev Güncelleme
+**Method:** `PUT`
+**URL:** `{{base_url}}/api/assignments/{{assignment_id}}`
+**Headers:**
+- `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "taskType": "PICKUP",
+  "description": "Güncellenmiş açıklama",
+  "driverId": "dc3df3c1-1f0b-4656-aa35-f4eba5167228"
+}
+```
+
+**Beklenen Response:**
+```json
+{
+  "id": "...",
+  "taskType": "PICKUP",
+  "driver": { ... },
+  "status": "ASSIGNED",
+  "assignedAt": "...",
+  "description": "Güncellenmiş açıklama",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+### Tüm Assignment'ları Listeleme
+**Method:** `GET`
+**URL:** `{{base_url}}/api/assignments`
+
+**Beklenen Response:**
+```json
+[
+  {
+    "id": "...",
+    "taskType": "DELIVERY",
+    "driver": { ... },
+    "status": "ASSIGNED",
+    "assignedAt": "...",
+    "description": "Test assignment",
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+]
+```
+
 ---
 
 ## 🧪 Test Senaryoları
@@ -485,3 +543,54 @@ Tüm request'leri sırasıyla çalıştırmak için **Collection Runner** kullan
 5. **JSON formatı** geçerli mi? JSON validator kullanın
 
 Bu guide ile Postman'de API'yi rahatlıkla test edebilirsiniz! 🎯 
+
+---
+
+## 📝 Postman Collection Assignment Uçları
+
+Aşağıdaki örnekleri kendi collection'ınıza ekleyebilirsiniz:
+
+```json
+{
+  "name": "Assignment Sil",
+  "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+      "raw": "{{base_url}}/api/assignments/{{assignment_id}}",
+      "host": ["{{base_url}}"],
+      "path": ["api", "assignments", "{{assignment_id}}"]
+    }
+  }
+},
+{
+  "name": "Assignment Güncelle",
+  "request": {
+    "method": "PUT",
+    "header": [
+      { "key": "Content-Type", "value": "application/json" }
+    ],
+    "body": {
+      "mode": "raw",
+      "raw": "{\n  \"taskType\": \"PICKUP\",\n  \"description\": \"Güncellenmiş açıklama\",\n  \"driverId\": \"dc3df3c1-1f0b-4656-aa35-f4eba5167228\"\n}"
+    },
+    "url": {
+      "raw": "{{base_url}}/api/assignments/{{assignment_id}}",
+      "host": ["{{base_url}}"],
+      "path": ["api", "assignments", "{{assignment_id}}"]
+    }
+  }
+},
+{
+  "name": "Tüm Assignment'ları Listele",
+  "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+      "raw": "{{base_url}}/api/assignments",
+      "host": ["{{base_url}}"],
+      "path": ["api", "assignments"]
+    }
+  }
+}
+``` 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, HttpStatus, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, HttpStatus, HttpCode, Delete } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Assignment, AssignmentStatus } from '../../domain/entities/assignment.entity';
@@ -43,5 +43,35 @@ export class AssignmentController {
         const assignment = await this.assignmentRepository.findOne({ where: { id }, relations: ['driver', 'shipment'] });
         if (!assignment) throw new Error('Assignment not found');
         return assignment;
+    }
+
+    // GÖREVİ SİL
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async deleteAssignment(@Param('id') id: string): Promise<void> {
+        const result = await this.assignmentRepository.delete(id);
+        if (result.affected === 0) {
+            throw new Error('Assignment not found');
+        }
+    }
+
+    // GÖREVİ GÜNCELLE (taskType, description, driver, shipment)
+    @Put(':id')
+    async updateAssignment(
+        @Param('id') id: string,
+        @Body() body: { taskType?: string; description?: string; driverId?: string; shipmentId?: string }
+    ): Promise<Assignment> {
+        const assignment = await this.assignmentRepository.findOne({ where: { id }, relations: ['driver', 'shipment'] });
+        if (!assignment) throw new Error('Assignment not found');
+        if (body.taskType !== undefined) assignment.taskType = body.taskType;
+        if (body.description !== undefined) assignment.description = body.description;
+        if (body.driverId !== undefined) {
+            const driver = await this.driverRepository.findOneByOrFail({ id: body.driverId });
+            assignment.driver = driver;
+        }
+        if (body.shipmentId !== undefined) {
+            assignment.shipment = body.shipmentId ? { id: body.shipmentId } as any : undefined;
+        }
+        return await this.assignmentRepository.save(assignment);
     }
 } 

@@ -230,3 +230,84 @@ curl -s http://localhost:3000/api/shipments | jq
 ```
 
 **Not:** `jq` komutu JSON'u güzel formatlar. Yüklemek için: `brew install jq` (macOS) veya `apt install jq` (Ubuntu). 
+
+---
+
+## 📝 Assignment (Görev) Yönetimi
+
+### 1. Yeni Assignment Oluşturma (POST)
+```bash
+curl -X POST http://localhost:3000/api/assignments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driverId": "cf4411fe-5fcb-4cc8-a27b-e8453ab171a4",
+    "taskType": "DELIVERY",
+    "description": "Test assignment"
+  }'
+```
+#### Response:
+```json
+{
+  "id": "cd98e1e8-0823-4ec3-bb8d-167cd106ea44",
+  "taskType": "DELIVERY",
+  "driver": { ... },
+  "status": "ASSIGNED",
+  "assignedAt": "2025-07-24T06:30:14.203Z",
+  "description": "Test assignment",
+  "createdAt": "2025-07-24T06:30:14.203Z",
+  "updatedAt": "2025-07-24T06:30:14.203Z"
+}
+```
+
+### 2. Assignment Silme (DELETE)
+```bash
+curl -X DELETE http://localhost:3000/api/assignments/cd98e1e8-0823-4ec3-bb8d-167cd106ea44 -w "\nHTTP Status: %{http_code}\n" -s
+```
+#### Response:
+```
+HTTP Status: 204
+```
+
+### 3. Assignment Güncelleme (PUT)
+```bash
+curl -X PUT http://localhost:3000/api/assignments/cd98e1e8-0823-4ec3-bb8d-167cd106ea44 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "taskType": "PICKUP",
+    "description": "Güncellenmiş açıklama",
+    "driverId": "dc3df3c1-1f0b-4656-aa35-f4eba5167228"
+  }'
+```
+#### Response:
+```json
+{
+  "id": "cd98e1e8-0823-4ec3-bb8d-167cd106ea44",
+  "taskType": "PICKUP",
+  "driver": { ... },
+  "status": "ASSIGNED",
+  "assignedAt": "2025-07-24T06:30:14.203Z",
+  "description": "Güncellenmiş açıklama",
+  "createdAt": "2025-07-24T06:30:14.203Z",
+  "updatedAt": "2025-07-24T06:35:00.000Z"
+}
+```
+
+### 4. Tüm Assignment'ları Listeleme (GET)
+```bash
+curl -s http://localhost:3000/api/assignments
+```
+#### Response:
+```json
+[
+  {
+    "id": "cd98e1e8-0823-4ec3-bb8d-167cd106ea44",
+    "taskType": "DELIVERY",
+    "driver": { ... },
+    "status": "ASSIGNED",
+    "assignedAt": "2025-07-24T06:30:14.203Z",
+    "description": "Test assignment",
+    "createdAt": "2025-07-24T06:30:14.203Z",
+    "updatedAt": "2025-07-24T06:30:14.203Z"
+  }
+]
+``` 
