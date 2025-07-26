@@ -7,7 +7,7 @@ import { OutboxEvent } from '../../domain/entities/outbox-event.entity';
 import { Driver } from '../../domain/entities/driver.entity';
 import { Assignment } from '../../domain/entities/assignment.entity';
 
-/**
+/** ??? Config ?!
  * TypeORM veritabanı konfigürasyonu
  * Environment variable'ları kullanarak dinamik konfigürasyon sağlar
  */

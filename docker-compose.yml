@@ -36,46 +36,37 @@ services:
       timeout: 5s
       retries: 3
 
-  # NestJS Application
-  app:
+  planner-api:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: development
-    container_name: logistic-control-api
-    environment:
-      NODE_ENV: development
-      PORT: 3000
-      DATABASE_URL: postgres://postgres:password@postgres:5432/logistic_control?sslmode=disable
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_PASSWORD: password
-      DB_NAME: logistic_control
-      DB_SYNC: true
-      DB_LOGGING: false
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: redis_password
+      dockerfile: planner-api/Dockerfile
     ports:
       - "3000:3000"
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - rabbitmq
     networks:
       - logistic-network
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/shipments/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=redis_password
+
+  driver-api:
+    build:
+      context: .
+      dockerfile: driver-api/Dockerfile
+    ports:
+      - "3001:3000"
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - logistic-network
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=redis_password
 
   # PostgreSQL Admin Interface (pgAdmin)
   pgadmin:
@@ -109,6 +100,22 @@ services:
   #   networks:
   #     - logistic-network
 
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - logistic-network
   # Named Volumes
 volumes:
   postgres_data:

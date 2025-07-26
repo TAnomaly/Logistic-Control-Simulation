@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Assignment, AssignmentStatus } from '../../domain/entities/assignment.entity';
 import { Driver } from '../../domain/entities/driver.entity';
+import { OutboxService } from '../../infrastructure/outbox/outbox.service';
 
 @Controller('api/assignments')
 export class AssignmentController {
@@ -11,6 +12,7 @@ export class AssignmentController {
         private readonly assignmentRepository: Repository<Assignment>,
         @InjectRepository(Driver)
         private readonly driverRepository: Repository<Driver>,
+        private readonly outboxService: OutboxService, // OutboxService'i ekle
     ) { }
 
     @Post()
@@ -24,7 +26,24 @@ export class AssignmentController {
             description: body.description,
             shipment: body.shipmentId ? { id: body.shipmentId } : undefined,
         });
-        return await this.assignmentRepository.save(assignment);
+        const saved = await this.assignmentRepository.save(assignment);
+
+        // Outbox'a event ekle
+        await this.outboxService.addToOutbox(
+            'AssignmentCreated',
+            saved.id,
+            {
+                assignmentId: saved.id,
+                driverId: saved.driver.id,
+                shipmentId: saved.shipment?.id,
+                taskType: saved.taskType,
+                description: saved.description,
+                status: saved.status,
+                assignedAt: saved.assignedAt,
+            }
+        );
+
+        return saved;
     }
 
     @Get()

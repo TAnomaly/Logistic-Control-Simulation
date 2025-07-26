@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 // import { ScheduleModule } from '@nestjs/schedule';
 
 // Domain Entities
@@ -78,6 +79,13 @@ import { AssignmentController } from './presentation/controllers/assignment.cont
 
         // Schedule modülü - Cron job'lar için (şimdilik devre dışı)
         // ScheduleModule.forRoot(),
+        RabbitMQModule.forRoot(RabbitMQModule, {
+            exchanges: [
+                { name: 'assignment-exchange', type: 'topic' }
+            ],
+            uri: 'amqp://rabbitmq:5672',
+            connectionInitOptions: { wait: false },
+        }),
     ],
 
     controllers: [

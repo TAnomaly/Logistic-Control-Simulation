@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { OutboxEvent } from '../../domain/entities/outbox-event.entity';
 import { TypeOrmOutboxEventRepository } from '../repositories/typeorm-outbox-event.repository';
 import { v4 as uuidv4 } from 'uuid';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 /**
  * OutboxService - Outbox pattern implementation
@@ -16,6 +17,7 @@ export class OutboxService {
     constructor(
         private readonly outboxRepository: TypeOrmOutboxEventRepository,
         private readonly eventBus: EventBus,
+        private readonly amqp: AmqpConnection, // RabbitMQ publisher
     ) { }
 
     /**
@@ -93,14 +95,17 @@ export class OutboxService {
             // Domain event nesnesini yeniden oluştur
             const domainEvent = this.reconstructDomainEvent(outboxEvent);
 
-            // EventBus ile publish et
+            // RabbitMQ'ya publish et
+            await this.amqp.publish('assignment-exchange', outboxEvent.eventType, outboxEvent.eventData);
+
+            // EventBus ile publish et (varsa eski mantık)
             await this.eventBus.publish(domainEvent);
 
             // Başarılı durumda outbox event'i güncelle
             outboxEvent.markAsPublished();
             await this.outboxRepository.update(outboxEvent);
 
-            this.logger.log(`Event başarıyla publish edildi: ${outboxEvent.eventType} - ${outboxEvent.aggregateId}`);
+            this.logger.log(`Event RabbitMQ'ya publish edildi: ${outboxEvent.eventType} - ${outboxEvent.aggregateId}`);
 
         } catch (error) {
             this.logger.error(`Event publish edilirken hata: ${outboxEvent.eventType} - ${error.message}`);
