@@ -1,0 +1,1 @@
+{"version":3,"file":"shipment-assigned.event.js","sourceRoot":"","sources":["../../../src/domain/events/shipment-assigned.event.ts"],"names":[],"mappings":";;;AAAA,MAAa,qBAAqB;IAC9B,YACoB,UAAkB,EAClB,QAAgB,EAChB,UAAgB;QAFhB,eAAU,GAAV,UAAU,CAAQ;QAClB,aAAQ,GAAR,QAAQ,CAAQ;QAChB,eAAU,GAAV,UAAU,CAAM;IAChC,CAAC;CACR;AAND,sDAMC"}

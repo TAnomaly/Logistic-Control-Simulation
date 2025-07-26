@@ -1,19 +1,29 @@
-# Development stage
-FROM node:18-alpine AS development
-WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm install
-COPY shared ./shared
-COPY . .
-COPY .env .env
+# Use Node.js 20 Alpine as base image
+FROM node:20-alpine
 
-# Production stage
-FROM node:18-alpine AS production
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Set working directory
 WORKDIR /usr/src/app
+
+# Copy package files
 COPY package*.json ./
-RUN npm ci --only=production
-COPY shared ./shared
+
+# Install ALL dependencies (including dev dependencies for build)
+RUN npm install
+
+# Copy source code
 COPY . .
+
+# Build the application
 RUN npm run build
 
-CMD ["node", "dist/src/main.js"] 
+# Remove dev dependencies and keep only production
+RUN npm prune --production
+
+# Expose port
+EXPOSE 3001
+
+# Start the application
+CMD ["node", "dist/main.js"] 

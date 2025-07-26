@@ -1,0 +1,1 @@
+{"version":3,"file":"get-shipments.query.js","sourceRoot":"","sources":["../../../src/application/queries/get-shipments.query.ts"],"names":[],"mappings":";;;AAEA,MAAa,iBAAiB;IAC1B,YACoB,MAAuB,EACvB,QAAiB,EACjB,KAAc,EACd,MAAe;QAHf,WAAM,GAAN,MAAM,CAAiB;QACvB,aAAQ,GAAR,QAAQ,CAAS;QACjB,UAAK,GAAL,KAAK,CAAS;QACd,WAAM,GAAN,MAAM,CAAS;IAC/B,CAAC;CACR;AAPD,8CAOC"}
