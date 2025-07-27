@@ -6,6 +6,7 @@ import { TypeOrmDriverRepository } from '../../infrastructure/repositories/typeo
 import { DriverLocationUpdatedEvent } from '../../domain/events/driver-location-updated.event';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { DriverLocation } from '../../domain/entities/driver-location.entity';
+import { RabbitMQService } from '../../infrastructure/rabbitmq/rabbitmq.service';
 
 @CommandHandler(UpdateDriverLocationCommand)
 export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriverLocationCommand> {
@@ -15,6 +16,7 @@ export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriver
         private readonly driverLocationRepository: Repository<DriverLocation>,
         private readonly eventBus: EventBus,
         private readonly redisService: RedisService,
+        private readonly rabbitmqService: RabbitMQService,
     ) { }
 
     async execute(command: UpdateDriverLocationCommand): Promise<void> {
@@ -52,6 +54,15 @@ export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriver
             // Publish domain event
             const event = new DriverLocationUpdatedEvent(driverId, latitude, longitude, address || '');
             this.eventBus.publish(event);
+
+            // Publish event to RabbitMQ for ML service
+            await this.rabbitmqService.publishEvent('driver.location.updated', {
+                driver_id: driverId,
+                latitude,
+                longitude,
+                address: address || '',
+                timestamp: new Date().toISOString()
+            }, 'driver.location.updated');
 
             console.log(`📍 Driver location updated: ${driverId} at ${latitude}, ${longitude}`);
         } catch (error) {
