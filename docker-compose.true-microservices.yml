@@ -129,7 +129,37 @@ services:
     #   retries: 3
     #   start_period: 40s
 
-    # Nginx API Gateway
+    # ML Route Optimizer Service
+  ml-route-optimizer:
+    build:
+      context: ./ml-route-optimizer
+      dockerfile: Dockerfile
+    container_name: logistic-ml-route-optimizer
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: ml_route_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./ml-route-optimizer/static:/app/static
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Nginx API Gateway
   nginx:
     image: nginx:alpine
     container_name: logistic-nginx
@@ -140,6 +170,7 @@ services:
     depends_on:
       - planner-api
       - driver-api
+      - ml-route-optimizer
     restart: unless-stopped
 
 volumes:

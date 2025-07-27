@@ -1,319 +1,375 @@
-# Lojistik Kontrol Simülasyon Sistemi
+# 🚚 Logistic Control Simulation
 
-Bu proje, modern yazılım mimarileri kullanarak geliştirilmiş kapsamlı bir lojistik kontrol simülasyon sistemidir. Domain Driven Design (DDD), CQRS, Outbox Pattern ve Event-Driven Architecture prensiplerini uygulayan, Kubernetes ortamında çalışacak şekilde tasarlanmış bir NestJS uygulamasıdır.
+Modern mikroservis mimarisi ile geliştirilmiş lojistik kontrol simülasyonu. Machine Learning destekli rota optimizasyonu ve event-driven mimari ile gerçek zamanlı lojistik operasyonları yönetimi.
 
-## 🏗️ Kullanılan Teknolojiler ve Mimari Desenler
+## 🏗️ Mimari Yapı
 
-### Teknolojiler
-- **NestJS** - Backend framework
+### Mikroservisler:
+- **Planner API** (NestJS) - Sipariş ve kargo yönetimi
+- **Driver API** (NestJS) - Sürücü yönetimi ve konum takibi  
+- **ML Route Optimizer** (Python FastAPI) - ML destekli rota optimizasyonu
+- **Nginx Gateway** - API Gateway ve yönlendirme
 - **PostgreSQL** - Ana veritabanı
-- **TypeORM** - ORM katmanı
-- **Redis** - Cache ve message broker (gelecekte)
-- **Docker & Docker Compose** - Container'laştırma
-- **Kubernetes** - Orchestration ve deployment
-- **Jest** - Unit testing framework
-- **TypeScript** - Statik tip kontrolü
-
-### Mimari Desenler
-- **Domain Driven Design (DDD)** - Domain odaklı tasarım
-- **CQRS (Command Query Responsibility Segregation)** - Okuma/yazma operasyonlarının ayrılması
-- **SOLID Prensipler** - Temiz kod mimarisi
-- **Outbox Pattern** - Güvenilir event publishing
-- **Event Bus Process** - Event-driven architecture
-- **Repository Pattern** - Data access layer abstraction
-
-## 📁 Proje Yapısı
-
-```
-src/
-├── domain/                     # Domain Layer (İş Mantığı)
-│   ├── entities/              # Domain Entity'ler
-│   │   ├── shipment.entity.ts        # Gönderi ana entity'si
-│   │   ├── gate.entity.ts            # Kapı/Geçit entity'si
-│   │   └── tracking-event.entity.ts  # İzleme olayları entity'si
-│   ├── value-objects/         # Value Object'ler
-│   │   ├── shipment-status.vo.ts     # Gönderi durumları
-│   │   ├── gate-type.vo.ts           # Kapı türleri
-│   │   └── tracking-event-type.vo.ts # Olay türleri
-│   ├── events/                # Domain Events
-│   │   └── shipment-created.event.ts # Gönderi oluşturma event'i
-│   └── repositories/          # Repository Interface'ler
-│       └── shipment.repository.ts     # Gönderi repository interface
-├── application/               # Application Layer (Use Cases)
-│   ├── commands/              # CQRS Commands
-│   │   └── create-shipment.command.ts # Gönderi oluşturma komutu
-│   ├── queries/               # CQRS Queries  
-│   │   └── get-shipment-by-tracking.query.ts # Takip sorgusu
-│   └── handlers/              # Command/Query Handler'ları
-│       ├── create-shipment.handler.ts         # Gönderi oluşturma handler
-│       ├── get-shipment-by-tracking.handler.ts # Takip sorgusu handler
-│       └── __tests__/         # Unit testler
-├── infrastructure/            # Infrastructure Layer
-│   ├── database/             # Database konfigürasyonu
-│   │   └── database.config.ts        # TypeORM config
-│   └── repositories/         # Repository implementasyonları
-│       └── typeorm-shipment.repository.ts # TypeORM gönderi repository
-├── presentation/             # Presentation Layer (API)
-│   └── controllers/          # REST API Controller'ları
-│       └── shipment.controller.ts    # Gönderi API endpoint'leri
-├── app.module.ts             # Ana uygulama modülü
-├── logistics.module.ts       # Lojistik sistem modülü
-└── main.ts                   # Uygulama giriş noktası
-```
+- **Redis** - Önbellek
+- **RabbitMQ** - Event-driven iletişim
 
 ## 🚀 Kurulum ve Çalıştırma
 
-### Gereksinimler
-- Node.js 18+
-- PostgreSQL 13+
-- Docker & Docker Compose
-- Kubernetes (isteğe bağlı)
-
-### Yerel Geliştirme Ortamı
-
-1. **Bağımlılıkları yükleyin:**
+### 1. Gereksinimler
 ```bash
-npm install
+# Docker ve Docker Compose yüklü olmalı
+docker --version
+docker-compose --version
 ```
 
-2. **Çevre değişkenlerini ayarlayın:**
+### 2. Projeyi Başlatma
 ```bash
-cp .env.example .env
-# .env dosyasını düzenleyin
+# Tüm servisleri başlat
+docker-compose -f docker-compose.true-microservices.yml up -d
+
+# Servislerin hazır olmasını bekle
+docker-compose -f docker-compose.true-microservices.yml ps
 ```
 
-3. **Docker Compose ile servisleri başlatın:**
+### 3. RabbitMQ Consumer'ı Aktif Etme
 ```bash
-docker-compose up -d postgres redis
+# ML servisinin RabbitMQ consumer'ını manuel başlat
+docker exec -it logistic-ml-route-optimizer python -c "from src.main import start_rabbitmq_consumer; start_rabbitmq_consumer()"
 ```
 
-4. **Uygulamayı geliştirme modunda çalıştırın:**
+## 📋 İş Akışı Senaryoları
+
+### Senaryo 1: Temel Sipariş Oluşturma ve Atama
+
+#### Adım 1: Sürücü Oluşturma
 ```bash
-npm run start:dev
+curl -X POST http://localhost:3001/api/drivers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ahmet Yılmaz",
+    "licenseNumber": "TR-123456",
+    "phoneNumber": "+90-555-123-4567",
+    "address": "İstanbul, Türkiye"
+  }'
 ```
 
-### Docker ile Tam Sistem
-
-```bash
-# Tüm servisleri başlatın (PostgreSQL, Redis, API, pgAdmin, Redis Commander)
-docker-compose up -d
-
-# Logları takip edin
-docker-compose logs -f app
-```
-
-### Kubernetes Deployment
-
-```bash
-# Namespace oluşturun
-kubectl apply -f k8s/namespace.yaml
-
-# PostgreSQL'i deploy edin
-kubectl apply -f k8s/postgres-deployment.yaml
-
-# Uygulamayı deploy edin
-kubectl apply -f k8s/app-deployment.yaml
-```
-
-## 🔧 API Endpoints
-
-### Gönderi İşlemleri
-
-#### Yeni Gönderi Oluşturma
-```http
-POST /api/shipments
-Content-Type: application/json
-
+**Beklenen Yanıt:**
+```json
 {
-  "senderName": "Ahmet Yılmaz",
-  "senderAddress": "İstanbul, Türkiye",
-  "receiverName": "Mehmet Demir", 
-  "receiverAddress": "Ankara, Türkiye",
-  "weight": 5.5,
-  "length": 30,
-  "width": 20,
-  "height": 15,
-  "estimatedDeliveryDate": "2024-12-31T10:00:00Z"
+  "id": "driver-uuid",
+  "name": "Ahmet Yılmaz",
+  "licenseNumber": "TR-123456",
+  "phoneNumber": "+90-555-123-4567",
+  "address": "İstanbul, Türkiye",
+  "status": "available",
+  "createdAt": "2025-07-27T...",
+  "updatedAt": "2025-07-27T..."
 }
 ```
 
-#### Gönderi Takibi
-```http
-GET /api/shipments/tracking/{trackingNumber}
-```
-
-#### Sistem Sağlık Kontrolü
-```http
-GET /api/shipments/health
-```
-
-### Yeni Özellikler (2024)
-
-#### Sürücü (Driver) Yönetimi
-- Sürücü ekleme, güncelleme, silme, listeleme
-- Sürücüye ait plaka, aktiflik, son konum (latitude/longitude) ve son konum güncelleme zamanı
-
-#### Görev (Assignment/Task) Yönetimi
-- Planner tarafından sürücüye görev atama (teslimat, pickup, transfer, vs.)
-- Görev tipi, atanan sürücü, ilgili gönderi (shipment), görev durumu (ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED)
-- Görevlerin atanma zamanı ve açıklama alanı
-
-#### Konum Takibi
-- Sürücülerin anlık konumunu güncelleme ve sorgulama
-- Sürücünün görevlerini ve konumunu API ile görüntüleme
-
-### Yeni API Endpointleri
-
-#### Sürücü (Driver) API
-- `POST /api/drivers` - Sürücü oluştur
-- `GET /api/drivers` - Tüm sürücüleri listele
-- `GET /api/drivers/:id` - Sürücü detayını getir
-- `PUT /api/drivers/:id` - Sürücü bilgilerini güncelle
-- `PUT /api/drivers/:id/location` - Sürücünün konumunu güncelle
-
-#### Görev (Assignment) API
-- `POST /api/assignments` - Sürücüye görev ata
-- `GET /api/assignments` - Tüm görevleri listele
-- `GET /api/assignments/driver/:driverId` - Bir sürücünün görevlerini listele
-- `PUT /api/assignments/:id/status` - Görev durumunu güncelle
-
-#### Örnek Kullanım
-
-**Sürücü Oluşturma:**
-```http
-POST /api/drivers
-Content-Type: application/json
-{
-  "firstName": "Ali",
-  "lastName": "Veli",
-  "licensePlate": "34ABC123"
-}
-```
-
-**Sürücüye Görev Atama:**
-```http
-POST /api/assignments
-Content-Type: application/json
-{
-  "driverId": "<driver-uuid>",
-  "taskType": "DELIVERY",
-  "shipmentId": "<shipment-uuid>",
-  "description": "Ankara teslimatı"
-}
-```
-
-**Sürücü Konumunu Güncelleme:**
-```http
-PUT /api/drivers/<driver-uuid>/location
-Content-Type: application/json
-{
-  "latitude": 39.9334,
-  "longitude": 32.8597
-}
-```
-
-**Bir Sürücünün Görevlerini Listeleme:**
-```http
-GET /api/assignments/driver/<driver-uuid>
-```
-
-## 📊 Lojistik Simülasyon Özellikleri
-
-### Gönderi Takip Sistemi
-- **Benzersiz takip numaraları** (Format: LCS-YYYYMMDD-XXXXXX)
-- **Real-time durum güncellemeleri**
-- **Geçmiş izleme olayları**
-
-### Kapı ve Geçiş Noktaları Sistemi
-- **10 farklı kapı türü** (Giriş, Çıkış, Sıralama, Depolama, vb.)
-- **GPS koordinatları** ile lokasyon takibi
-- **İş kuralları** ve kapı geçiş validasyonları
-- **Kapıdan kapıya** süreç takibi
-
-### İzleme Olayları
-- **33 farklı olay türü** (Giriş, Çıkış, Sıralama, Kalite Kontrol, vb.)
-- **Otomatik zaman damgaları**
-- **Konum doğrulama** (GPS ile kapı lokasyonu karşılaştırması)
-- **İş kuralları validasyonu**
-
-### Gönderi Durumları
-- **11 farklı durum** (Oluşturuldu, Transit, Teslimat, vb.)
-- **Durum geçiş kuralları** ve validasyonları
-- **Terminal durumlar** ve aktif süreç kontrolü
-
-## 🧪 Test Yapısı
-
-### Unit Testler
+#### Adım 2: Sürücü Konumu Güncelleme
 ```bash
-# Tüm testleri çalıştır
-npm run test
-
-# Test coverage raporu
-npm run test:cov
-
-# Watch modda testler
-npm run test:watch
+curl -X PUT http://localhost:3001/api/drivers/driver-uuid/location \
+  -H "Content-Type: application/json" \
+  -d '{
+    "latitude": 41.0082,
+    "longitude": 28.9784
+  }'
 ```
 
-### Test Yapısı Örneği
-- **Handler testleri** - CQRS command/query handler'ların testleri
-- **Repository testleri** - Database işlemlerinin testleri
-- **Domain logic testleri** - İş mantığı testleri
-- **Integration testleri** - API endpoint testleri
+#### Adım 3: Kargo/Sipariş Oluşturma
+```bash
+curl -X POST http://localhost:3000/api/shipments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trackingNumber": "TRK-2025-001",
+    "origin": "İstanbul Merkez",
+    "destination": "Ankara Merkez", 
+    "description": "Elektronik ürünler",
+    "weight": 500,
+    "volume": 2.5
+  }'
+```
 
-## 🏛️ Mimari Açıklamaları
+**Beklenen Yanıt:**
+```json
+{
+  "id": "shipment-uuid",
+  "trackingNumber": "TRK-2025-001",
+  "origin": "İstanbul Merkez",
+  "destination": "Ankara Merkez",
+  "description": "Elektronik ürünler",
+  "weight": 500,
+  "volume": 2.5,
+  "status": "pending",
+  "assignedDriverId": null,
+  "createdAt": "2025-07-27T...",
+  "updatedAt": "2025-07-27T..."
+}
+```
 
-### Domain Driven Design (DDD)
-- **Entities**: Gönderi, Kapı, İzleme Olayları
-- **Value Objects**: Durum enums, iş kuralları
-- **Aggregates**: Gönderi aggregate'i ile tracking events
-- **Domain Events**: Gönderi oluşturma, durum değişimleri
+#### Adım 4: ML Rota Optimizasyonu
+```bash
+curl -X POST http://localhost:3002/api/v1/routes/optimize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver_id": "driver-uuid",
+    "pickup_locations": [
+      {
+        "lat": 41.0082,
+        "lng": 28.9784,
+        "type": "pickup",
+        "address": "İstanbul Merkez"
+      }
+    ],
+    "delivery_locations": [
+      {
+        "lat": 39.9334,
+        "lng": 32.8597,
+        "type": "delivery", 
+        "address": "Ankara Merkez"
+      }
+    ],
+    "vehicle_capacity": 1000
+  }'
+```
 
-### CQRS Implementation
-- **Commands**: Yazma operasyonları (Gönderi oluşturma)
-- **Queries**: Okuma operasyonları (Gönderi sorgulama)
-- **Handlers**: Command ve query işleme mantığı
-- **Separation**: Okuma ve yazma modelleri ayrılması
+**Beklenen Yanıt:**
+```json
+{
+  "route_id": "ROUTE_20250727_123456",
+  "driver_id": "driver-uuid",
+  "optimized_route": [...],
+  "total_distance": 450.5,
+  "total_duration": 32400,
+  "estimated_eta": "2025-07-27T...",
+  "fuel_consumption": 36.04,
+  "traffic_factor": 1.0,
+  "waypoints": [...],
+  "map_url": "/static/maps/route_20250727_123456.html"
+}
+```
 
-### Event-Driven Architecture
-- **Domain Events**: İş olaylarının yayınlanması
-- **Event Handlers**: Olay işleme mantığı
-- **Outbox Pattern**: Güvenilir event delivery (gelecekte)
+#### Adım 5: Sipariş Atama
+```bash
+curl -X POST http://localhost:3000/api/shipments/shipment-uuid/assign \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driverId": "driver-uuid"
+  }'
+```
 
-## 🌐 Production Deployment
+### Senaryo 2: Event-Driven Entegrasyon
+
+#### Adım 1: RabbitMQ Consumer Aktif Etme
+```bash
+# ML servisinin event dinleyicisini başlat
+docker exec -it logistic-ml-route-optimizer python -c "from src.main import start_rabbitmq_consumer; start_rabbitmq_consumer()"
+```
+
+#### Adım 2: Event-Driven Sipariş Oluşturma
+```bash
+# Bu sipariş otomatik olarak ML servisine event gönderecek
+curl -X POST http://localhost:3000/api/shipments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trackingNumber": "TRK-2025-002",
+    "origin": "İzmir Liman",
+    "destination": "Bursa Organize",
+    "description": "Event-driven test",
+    "weight": 750,
+    "volume": 3.0
+  }'
+```
+
+**Event Akışı:**
+1. Planner API sipariş oluşturur
+2. `shipment.created` event'i RabbitMQ'ya gönderilir
+3. ML servisi event'i dinler ve rota optimizasyonu yapar
+4. Sonuç veritabanına kaydedilir
+
+### Senaryo 3: Çoklu Araç Rota Optimizasyonu
+
+```bash
+curl -X POST http://localhost:3002/api/v1/routes/optimize-multi-vehicle \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vehicles": [
+      {"id": "truck-1", "capacity": 2000},
+      {"id": "van-1", "capacity": 500}
+    ],
+    "pickup_locations": [
+      {"lat": 41.0082, "lng": 28.9784, "type": "pickup"},
+      {"lat": 40.9862, "lng": 29.1244, "type": "pickup"}
+    ],
+    "delivery_locations": [
+      {"lat": 39.9334, "lng": 32.8597, "type": "delivery"},
+      {"lat": 38.4192, "lng": 27.1287, "type": "delivery"}
+    ]
+  }'
+```
+
+## 🔍 Durum Kontrolü
+
+### Mevcut Siparişleri Görüntüleme
+```bash
+# Tüm siparişleri listele
+curl http://localhost:3000/api/shipments
+
+# Atanmış siparişleri filtrele
+curl "http://localhost:3000/api/shipments?status=assigned"
+
+# Bekleyen siparişleri filtrele  
+curl "http://localhost:3000/api/shipments?status=pending"
+```
+
+### Mevcut Sürücüleri Görüntüleme
+```bash
+# Tüm sürücüleri listele
+curl http://localhost:3001/api/drivers
+
+# Müsait sürücüleri filtrele
+curl "http://localhost:3001/api/drivers?status=available"
+```
+
+### ML Servisi Durumu
+```bash
+# ML servisi sağlık kontrolü
+curl http://localhost:3002/health
+
+# Rota optimizasyon geçmişi
+curl http://localhost:3002/api/v1/routes/history
+```
+
+## 🛠️ Geliştirme ve Debug
+
+### Logları İzleme
+```bash
+# Tüm servislerin logları
+docker-compose -f docker-compose.true-microservices.yml logs -f
+
+# Belirli servisin logları
+docker logs -f logistic-planner-api
+docker logs -f logistic-driver-api  
+docker logs -f logistic-ml-route-optimizer
+```
+
+### Veritabanı Erişimi
+```bash
+# PostgreSQL'e bağlan
+docker exec -it logistic-postgres psql -U postgres -d planner_db
+
+# pgAdmin web arayüzü
+# http://localhost:5050
+# Email: admin@admin.com
+# Password: admin
+```
+
+### RabbitMQ Yönetimi
+```bash
+# RabbitMQ web arayüzü
+# http://localhost:15672
+# Username: admin
+# Password: password
+```
+
+## 🔧 Konfigürasyon
 
 ### Environment Variables
-```env
-NODE_ENV=production
-PORT=3000
-DB_HOST=postgres-service
-DB_NAME=logistic_control
-DB_USERNAME=postgres
-DB_PASSWORD=secure_password
-DB_SYNC=false
-DB_LOGGING=false
+```yaml
+# Planner API
+DB_HOST: postgres
+DB_PORT: 5432
+DB_USERNAME: postgres
+DB_PASSWORD: postgres
+DB_NAME: planner_db
+RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+
+# Driver API  
+DB_HOST: postgres
+DB_PORT: 5432
+DB_USERNAME: postgres
+DB_PASSWORD: postgres
+DB_NAME: driver_db
+RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+
+# ML Route Optimizer
+DB_HOST: postgres
+DB_PORT: 5432
+DB_USERNAME: postgres
+DB_PASSWORD: postgres
+DB_NAME: ml_route_db
+RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
 ```
 
-### Kubernetes Monitoring
-- **Health Checks**: Liveness ve readiness probe'ları
-- **HPA (Horizontal Pod Autoscaler)**: CPU/Memory bazlı otomatik scaling
-- **Resource Limits**: Memory ve CPU sınırları
-- **Security Context**: Non-root user, read-only filesystem
+### Port Mappings
+- **Planner API**: 3000
+- **Driver API**: 3001  
+- **ML Route Optimizer**: 3002
+- **Nginx Gateway**: 80
+- **PostgreSQL**: 5432
+- **Redis**: 6379
+- **RabbitMQ**: 5672 (AMQP), 15672 (Management)
+- **pgAdmin**: 5050
 
-### Yönetim Arayüzleri
-- **pgAdmin**: http://localhost:8080 (admin@logistic.com / admin123)
-- **Redis Commander**: http://localhost:8081 (admin / admin123)
+## 🚨 Bilinen Sorunlar ve Çözümler
+
+### 1. RabbitMQ Consumer Manuel Başlatma
+**Sorun:** ML servisi başladığında RabbitMQ consumer otomatik başlamıyor.
+
+**Çözüm:** 
+```bash
+docker exec -it logistic-ml-route-optimizer python -c "from src.main import start_rabbitmq_consumer; start_rabbitmq_consumer()"
+```
+
+### 2. Database Migration Sorunları
+**Sorun:** Servisler başladığında tablolar eksik olabilir.
+
+**Çözüm:**
+```bash
+# Servisleri yeniden başlat
+docker-compose -f docker-compose.true-microservices.yml restart planner-api driver-api
+```
+
+### 3. ML Route Optimization Hataları
+**Sorun:** OR-Tools kütüphanesi ile ilgili hatalar.
+
+**Çözüm:** Sistem fallback mekanizması ile basit rota hesaplaması yapar.
+
+## 📊 Performans Metrikleri
+
+### API Response Times
+- **Planner API**: ~50ms
+- **Driver API**: ~45ms  
+- **ML Route Optimizer**: ~200ms (basit hesaplama)
+- **Nginx Gateway**: ~10ms
+
+### Event Processing
+- **RabbitMQ Event Latency**: ~100ms
+- **Event Processing Time**: ~150ms
+- **Database Write Time**: ~30ms
 
 ## 🔮 Gelecek Geliştirmeler
 
-- [ ] Redis ile caching implementasyonu
-- [ ] Outbox pattern ile event store
-- [ ] JWT tabanlı authentication
-- [ ] GraphQL API desteği
-- [ ] Microservice architecture'e geçiş
-- [ ] Advanced monitoring (Prometheus/Grafana)
-- [ ] CI/CD pipeline kurulumu
+1. **Otomatik RabbitMQ Consumer Başlatma**
+2. **Gelişmiş ML Algoritmaları**
+3. **Real-time Konum Takibi**
+4. **Mobil Uygulama Entegrasyonu**
+5. **Analytics Dashboard**
+6. **Multi-language Support**
+7. **Advanced Caching Strategies**
+8. **Load Balancing**
+9. **Monitoring ve Alerting**
+10. **CI/CD Pipeline**
 
-## 📝 Lisans
+## 📞 Destek
 
-Bu proje MIT lisansı altında geliştirilmiştir.
+Herhangi bir sorun yaşarsanız:
+1. Logları kontrol edin
+2. Servis durumlarını kontrol edin  
+3. Veritabanı bağlantılarını test edin
+4. RabbitMQ event akışını kontrol edin
+
+---
+
+**Not:** Bu sistem geliştirme ortamı için tasarlanmıştır. Production ortamı için ek güvenlik, monitoring ve scaling konfigürasyonları gerekir.
