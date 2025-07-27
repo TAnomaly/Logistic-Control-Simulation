@@ -10,11 +10,14 @@ import { DriverAssignment } from './domain/entities/driver-assignment.entity';
 
 // Infrastructure Repositories
 import { TypeOrmDriverRepository } from './infrastructure/repositories/typeorm-driver.repository';
+import { TypeOrmDriverLocationRepository } from './infrastructure/repositories/typeorm-driver-location.repository';
+import { TypeOrmDriverAssignmentRepository } from './infrastructure/repositories/typeorm-driver-assignment.repository';
 
 // Application Handlers
 import { CreateDriverHandler } from './application/handlers/create-driver.handler';
 import { UpdateDriverLocationHandler } from './application/handlers/update-driver-location.handler';
 import { GetDriversHandler } from './application/handlers/get-drivers.handler';
+import { AssignShipmentHandler } from './application/handlers/assign-shipment.handler';
 
 // Controllers
 import { DriverController } from './controllers/driver.controller';
@@ -44,9 +47,12 @@ import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
     providers: [
         // Repository Implementations
         TypeOrmDriverRepository,
+        TypeOrmDriverLocationRepository,
+        TypeOrmDriverAssignmentRepository,
         // Command Handlers
         CreateDriverHandler,
         UpdateDriverLocationHandler,
+        AssignShipmentHandler,
         // Query Handlers
         GetDriversHandler,
         // Infrastructure Services

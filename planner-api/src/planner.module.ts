@@ -12,6 +12,7 @@ import { OutboxEvent } from './domain/entities/outbox-event.entity';
 import { TypeOrmShipmentRepository } from './infrastructure/repositories/typeorm-shipment.repository';
 import { TypeOrmTrackingEventRepository } from './infrastructure/repositories/typeorm-tracking-event.repository';
 import { TypeOrmOutboxEventRepository } from './infrastructure/repositories/typeorm-outbox-event.repository';
+import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor.service';
 
 // Application Handlers
 import { CreateShipmentHandler } from './application/handlers/create-shipment.handler';
@@ -49,6 +50,7 @@ import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
         TypeOrmShipmentRepository,
         TypeOrmTrackingEventRepository,
         TypeOrmOutboxEventRepository,
+        OutboxProcessorService,
         // Command Handlers
         CreateShipmentHandler,
         AssignShipmentHandler,

@@ -40,10 +40,10 @@ export class DriverAssignment {
     completedAt: Date;
 
     @Column({ type: 'text', nullable: true })
-    notes: string;
+    notes: string | null;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-    estimatedDuration: number;
+    estimatedDuration: number | null;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
     actualDuration: number;

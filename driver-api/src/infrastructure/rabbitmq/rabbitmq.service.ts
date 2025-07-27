@@ -1,12 +1,21 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { DriverAssignment, AssignmentStatus } from '../../domain/entities/driver-assignment.entity';
+import * as amqp from 'amqplib';
 
 @Injectable()
-export class RabbitMQService implements OnModuleDestroy {
-    constructor(private readonly configService: ConfigService) { }
+export class RabbitMQService implements OnModuleInit {
+    constructor(
+        private readonly configService: ConfigService,
+        @InjectRepository(DriverAssignment)
+        private readonly driverAssignmentRepository: Repository<DriverAssignment>,
+    ) { }
 
     async onModuleInit() {
         console.log('✅ RabbitMQ service initialized (placeholder)');
+        this.subscribeToShipmentAssigned();
     }
 
     async onModuleDestroy() {
@@ -35,5 +44,51 @@ export class RabbitMQService implements OnModuleDestroy {
 
     async healthCheck(): Promise<boolean> {
         return true;
+    }
+
+    async subscribeToShipmentAssigned() {
+        const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@rabbitmq';
+        const EXCHANGE = 'logistics';
+        const ROUTING_KEY = 'shipment.assigned';
+        const QUEUE = 'driver-api.shipment.assigned';
+
+        try {
+            const connection = await amqp.connect(RABBITMQ_URL);
+            const channel = await connection.createChannel();
+
+            // Declare exchange
+            await channel.assertExchange(EXCHANGE, 'topic', { durable: true });
+
+            // Declare queue
+            await channel.assertQueue(QUEUE, { durable: true });
+
+            // Bind queue to exchange with routing key
+            await channel.bindQueue(QUEUE, EXCHANGE, ROUTING_KEY);
+
+            channel.consume(QUEUE, async (msg) => {
+                if (msg) {
+                    try {
+                        const event = JSON.parse(msg.content.toString());
+                        console.log(`📨 Received shipment.assigned event:`, event);
+
+                        const assignment = this.driverAssignmentRepository.create({
+                            driverId: event.driverId,
+                            shipmentId: event.shipmentId,
+                            status: AssignmentStatus.PENDING,
+                            assignedAt: event.assignedAt ? new Date(event.assignedAt) : new Date(),
+                        });
+                        await this.driverAssignmentRepository.save(assignment);
+                        console.log(`✅ Assignment created for driver ${event.driverId} and shipment ${event.shipmentId}`);
+                        channel.ack(msg);
+                    } catch (err) {
+                        console.error('❌ Error processing shipment.assigned event:', err);
+                        channel.nack(msg, false, false);
+                    }
+                }
+            });
+            console.log('🚚 Listening for shipment.assigned events from RabbitMQ...');
+        } catch (err) {
+            console.error('❌ Failed to connect to RabbitMQ for shipment.assigned:', err);
+        }
     }
 } 
