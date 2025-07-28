@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 
 // Domain Entities
 import { Shipment } from './domain/entities/shipment.entity';
@@ -27,6 +28,9 @@ import { ShipmentController } from './controllers/shipment.controller';
 import { RedisService } from './infrastructure/redis/redis.service';
 import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
 
+// Auth Module
+import { AuthModule } from './auth/auth.module';
+
 @Module({
     imports: [
         ConfigModule.forRoot(),
@@ -43,6 +47,11 @@ import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
         }),
         TypeOrmModule.forFeature([Shipment, TrackingEvent, OutboxEvent]),
         CqrsModule,
+        AuthModule,
+        JwtModule.register({
+            secret: process.env.JWT_SECRET || 'your-super-secret-key-here',
+            signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '15m' },
+        }),
     ],
     controllers: [ShipmentController],
     providers: [

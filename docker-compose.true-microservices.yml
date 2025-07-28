@@ -78,6 +78,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+      JWT_SECRET: your-super-secret-key-here-change-in-production
+      JWT_EXPIRES_IN: 15m
     ports:
       - "3000:3000"
     depends_on:
@@ -112,6 +114,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+      JWT_SECRET: your-super-secret-key-here-change-in-production
+      JWT_EXPIRES_IN: 15m
     ports:
       - "3001:3001"
     depends_on:

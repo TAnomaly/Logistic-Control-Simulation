@@ -1,10 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CreateShipmentCommand } from '../application/commands/create-shipment.command';
 import { AssignShipmentCommand } from '../application/commands/assign-shipment.command';
 import { GetShipmentsQuery } from '../application/queries/get-shipments.query';
 import { GetShipmentByIdQuery } from '../application/queries/get-shipment-by-id.query';
 import { Shipment, ShipmentStatus } from '../domain/entities/shipment.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../auth/jwt.strategy';
 
 export class CreateShipmentDto {
     trackingNumber: string;
@@ -27,6 +31,8 @@ export class ShipmentController {
         private readonly queryBus: QueryBus
     ) { }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.PLANNER, UserRole.ADMIN, UserRole.DISPATCHER)
     @Post()
     async createShipment(@Body() dto: CreateShipmentDto): Promise<Shipment> {
         const command = new CreateShipmentCommand(
@@ -42,6 +48,8 @@ export class ShipmentController {
         return await this.commandBus.execute(command);
     }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.PLANNER)
     @Put(':id/assign')
     async assignShipment(
         @Param('id') id: string,
@@ -51,6 +59,8 @@ export class ShipmentController {
         return await this.commandBus.execute(command);
     }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.PLANNER, UserRole.ADMIN, UserRole.DISPATCHER, UserRole.CUSTOMER)
     @Get()
     async getShipments(
         @Query('status') status?: ShipmentStatus,
@@ -60,12 +70,16 @@ export class ShipmentController {
         return await this.queryBus.execute(query);
     }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.PLANNER, UserRole.ADMIN, UserRole.DISPATCHER, UserRole.CUSTOMER)
     @Get(':id')
     async getShipmentById(@Param('id') id: string): Promise<Shipment | null> {
         const query = new GetShipmentByIdQuery(id);
         return await this.queryBus.execute(query);
     }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.PLANNER, UserRole.ADMIN, UserRole.DISPATCHER, UserRole.CUSTOMER)
     @Get('tracking/:trackingNumber')
     async getShipmentByTrackingNumber(@Param('trackingNumber') trackingNumber: string): Promise<Shipment | null> {
         // This would need a separate query handler

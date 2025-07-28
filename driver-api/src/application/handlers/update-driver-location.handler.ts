@@ -14,7 +14,7 @@ export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriver
         @InjectRepository(DriverLocation)
         private readonly driverLocationRepository: Repository<DriverLocation>,
         private readonly eventBus: EventBus,
-        private readonly redisService: RedisService,
+        private readonly redisService: RedisService,//RedisServıce Yapısı.
     ) { }
 
     async execute(command: UpdateDriverLocationCommand): Promise<void> {
