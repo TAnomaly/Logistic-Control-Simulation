@@ -146,5 +146,31 @@ services:
       - driver-api
     restart: unless-stopped
 
+  # ML Service (Python)
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: logistic-ml-service
+    environment:
+      - DRIVER_API_URL=http://driver-api:3001
+      - PLANNER_API_URL=http://planner-api:3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672
+      # OpenStreetMap is free, no API key needed
+    ports:
+      - "8000:8000"
+    depends_on:
+      driver-api:
+        condition: service_started
+      planner-api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:

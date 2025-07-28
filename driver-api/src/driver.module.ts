@@ -8,24 +8,34 @@ import { JwtModule } from '@nestjs/jwt';
 import { Driver } from './domain/entities/driver.entity';
 import { DriverLocation } from './domain/entities/driver-location.entity';
 import { DriverAssignment } from './domain/entities/driver-assignment.entity';
+import { Shipment } from './domain/entities/shipment.entity';
+import { DriverRoute } from './domain/entities/driver-route.entity';
 
 // Infrastructure Repositories
 import { TypeOrmDriverRepository } from './infrastructure/repositories/typeorm-driver.repository';
 import { TypeOrmDriverLocationRepository } from './infrastructure/repositories/typeorm-driver-location.repository';
 import { TypeOrmDriverAssignmentRepository } from './infrastructure/repositories/typeorm-driver-assignment.repository';
+import { TypeOrmShipmentRepository } from './infrastructure/repositories/typeorm-shipment.repository';
+import { TypeOrmDriverRouteRepository } from './infrastructure/repositories/typeorm-driver-route.repository';
 
 // Application Handlers
 import { CreateDriverHandler } from './application/handlers/create-driver.handler';
 import { UpdateDriverLocationHandler } from './application/handlers/update-driver-location.handler';
 import { GetDriversHandler } from './application/handlers/get-drivers.handler';
+import { GetDriverShipmentsHandler } from './application/handlers/get-driver-shipments.handler';
 import { AssignShipmentHandler } from './application/handlers/assign-shipment.handler';
 
 // Controllers
 import { DriverController } from './controllers/driver.controller';
+import { RouteController } from './controllers/route.controller';
 
 // Infrastructure Services
 import { RedisService } from './infrastructure/redis/redis.service';
 import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
+
+// Services
+import { CapacityService } from './services/capacity.service';
+import { RouteService } from './services/route.service';
 
 // Auth Module
 import { AuthModule } from './auth/auth.module';
@@ -40,11 +50,11 @@ import { AuthModule } from './auth/auth.module';
             username: process.env.DB_USERNAME || 'postgres',
             password: process.env.DB_PASSWORD || 'postgres',
             database: process.env.DB_NAME || 'driver_db',
-            entities: [Driver, DriverLocation, DriverAssignment],
+            entities: [Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute],
             synchronize: true, // Development only
             logging: true,
         }),
-        TypeOrmModule.forFeature([Driver, DriverLocation, DriverAssignment]),
+        TypeOrmModule.forFeature([Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute]),
         CqrsModule,
         AuthModule,
         JwtModule.register({
@@ -52,21 +62,27 @@ import { AuthModule } from './auth/auth.module';
             signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '15m' },
         }),
     ],
-    controllers: [DriverController],
+    controllers: [DriverController, RouteController],
     providers: [
         // Repository Implementations
         TypeOrmDriverRepository,
         TypeOrmDriverLocationRepository,
         TypeOrmDriverAssignmentRepository,
+        TypeOrmShipmentRepository,
+        TypeOrmDriverRouteRepository,
         // Command Handlers
         CreateDriverHandler,
         UpdateDriverLocationHandler,
         AssignShipmentHandler,
         // Query Handlers
         GetDriversHandler,
+        GetDriverShipmentsHandler,
         // Infrastructure Services
         RedisService,
         RabbitMQService,
+        // Services
+        CapacityService,
+        RouteService,
     ],
 })
 export class DriverModule { } 
