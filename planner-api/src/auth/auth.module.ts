@@ -15,7 +15,7 @@ import { RolesGuard } from './roles.guard';
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: async (configService: ConfigService) => ({
-                secret: configService.get('JWT_SECRET', 'your-super-secret-key-here'),
+                secret: configService.get('JWT_SECRET', 'DFDS-Tugra'),
                 signOptions: {
                     expiresIn: configService.get('JWT_EXPIRES_IN', '15m'),
                 },

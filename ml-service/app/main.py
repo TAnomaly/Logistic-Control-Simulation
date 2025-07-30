@@ -8,6 +8,8 @@ import os
 from app.api.routes import router as api_router
 from app.services.redis_service import RedisService
 from app.services.rabbitmq_service import RabbitMQService
+from app.services.webhook_consumer import webhook_consumer
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -28,6 +30,21 @@ async def lifespan(app: FastAPI):
     # Initialize RabbitMQ
     rabbitmq_service = RabbitMQService()
     await rabbitmq_service.connect()
+    
+    # 🚀 Start webhook consumer in background
+    try:
+        # Start webhook consumer in a separate thread to avoid blocking
+        import threading
+        def start_webhook_consumer():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(webhook_consumer.start_consuming())
+        
+        webhook_thread = threading.Thread(target=start_webhook_consumer, daemon=True)
+        webhook_thread.start()
+        print("🚀 Webhook consumer started in background thread!")
+    except Exception as e:
+        print(f"❌ Failed to start webhook consumer: {e}")
     
     print("🚀 ML Service started successfully!")
     

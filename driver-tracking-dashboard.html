@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚛 Driver Rota Takip Sistemi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .driver-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .info-icon {
+            font-size: 1.2rem;
+            margin-right: 10px;
+            color: #667eea;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #666;
+            margin-right: 5px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .route-timeline {
+            grid-column: 1 / -1;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #667eea;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 25px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+        }
+
+        .timeline-item.completed {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .timeline-item.completed::before {
+            background: #28a745;
+        }
+
+        .timeline-item.current {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .timeline-item.current::before {
+            background: #ffc107;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .step-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .step-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .step-detail {
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .step-detail-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .step-detail-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-pending {
+            background: #ffc107;
+        }
+
+        .status-completed {
+            background: #6c757d;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s ease;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .driver-info {
+                grid-template-columns: 1fr;
+            }
+
+            .step-details {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 Driver Rota Takip Sistemi</h1>
+            <p>Gerçek zamanlı dinamik rota takibi ve teslimat yönetimi</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Driver Bilgileri -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">👤</div>
+                    <div class="card-title">Driver Bilgileri</div>
+                </div>
+                <div class="driver-info">
+                    <div class="info-item">
+                        <div class="info-icon">🆔</div>
+                        <div>
+                            <span class="info-label">ID:</span>
+                            <span class="info-value" id="driver-id">-</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">📍</div>
+                        <div>
+                            <span class="info-label">Konum:</span>
+                            <span class="info-value" id="driver-location">-</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">📦</div>
+                        <div>
+                            <span class="info-label">Sipariş:</span>
+                            <span class="info-value" id="total-shipments">-</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">⚡</div>
+                        <div>
+                            <span class="info-label">Durum:</span>
+                            <span class="status-indicator status-active"></span>
+                            <span class="info-value">Aktif</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rota Özeti -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🗺️</div>
+                    <div class="card-title">Rota Özeti</div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-distance">0</div>
+                        <div class="stat-label">Toplam Mesafe (km)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-time">0</div>
+                        <div class="stat-label">Toplam Süre (saat)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completed-deliveries">0</div>
+                        <div class="stat-label">Tamamlanan Teslimat</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="remaining-deliveries">0</div>
+                        <div class="stat-label">Kalan Teslimat</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rota Timeline -->
+        <div class="card route-timeline">
+            <div class="card-header">
+                <div class="card-icon">📋</div>
+                <div class="card-title">Teslimat Rotaları</div>
+            </div>
+            <div class="timeline" id="route-timeline">
+                <!-- Timeline items will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Kontroller -->
+        <div class="controls">
+            <button class="btn btn-primary" onclick="startSimulation()">🚀 Simülasyonu Başlat</button>
+            <button class="btn btn-success" onclick="updateLocation()">📍 Konum Güncelle</button>
+            <button class="btn btn-warning" onclick="resetSimulation()">🔄 Sıfırla</button>
+        </div>
+    </div>
+
+    <script>
+        // Global değişkenler
+        let currentStep = 0;
+        let totalSteps = 3;
+        let driverLocation = "Ankara, Turkey";
+        let deliverySteps = [
+            {
+                from: "Ankara, Turkey",
+                to: "Istanbul, Turkey",
+                shipmentId: "TRK-001",
+                weight: "1500kg",
+                distance: "450km",
+                time: "6 saat",
+                status: "pending"
+            },
+            {
+                from: "Istanbul, Turkey",
+                to: "Izmir, Turkey",
+                shipmentId: "TRK-002",
+                weight: "2000kg",
+                distance: "350km",
+                time: "5 saat",
+                status: "pending"
+            },
+            {
+                from: "Izmir, Turkey",
+                to: "Ankara, Turkey",
+                shipmentId: "TRK-003",
+                weight: "1200kg",
+                distance: "600km",
+                time: "8 saat",
+                status: "pending"
+            }
+        ];
+
+        // Sayfa yüklendiğinde çalışacak fonksiyonlar
+        document.addEventListener('DOMContentLoaded', function () {
+            updateDriverInfo();
+            renderTimeline();
+            updateStats();
+        });
+
+        // Driver bilgilerini güncelle
+        function updateDriverInfo() {
+            document.getElementById('driver-id').textContent = 'DRV-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+            document.getElementById('driver-location').textContent = driverLocation;
+            document.getElementById('total-shipments').textContent = totalSteps;
+        }
+
+        // Timeline'ı render et
+        function renderTimeline() {
+            const timeline = document.getElementById('route-timeline');
+            timeline.innerHTML = '';
+
+            deliverySteps.forEach((step, index) => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = `timeline-item ${step.status}`;
+
+                timelineItem.innerHTML = `
+                    <div class="step-number">${index + 1}</div>
+                    <div class="step-title">${step.from} → ${step.to}</div>
+                    <div class="step-details">
+                        <div class="step-detail">
+                            <div class="step-detail-label">Sipariş ID</div>
+                            <div class="step-detail-value">${step.shipmentId}</div>
+                        </div>
+                        <div class="step-detail">
+                            <div class="step-detail-label">Ağırlık</div>
+                            <div class="step-detail-value">${step.weight}</div>
+                        </div>
+                        <div class="step-detail">
+                            <div class="step-detail-label">Mesafe</div>
+                            <div class="step-detail-value">${step.distance}</div>
+                        </div>
+                    </div>
+                `;
+
+                timeline.appendChild(timelineItem);
+            });
+        }
+
+        // İstatistikleri güncelle
+        function updateStats() {
+            const completed = deliverySteps.filter(step => step.status === 'completed').length;
+            const totalDistance = deliverySteps.reduce((sum, step) => {
+                return sum + parseInt(step.distance);
+            }, 0);
+            const totalTime = deliverySteps.reduce((sum, step) => {
+                return sum + parseInt(step.time);
+            }, 0);
+
+            document.getElementById('total-distance').textContent = totalDistance;
+            document.getElementById('total-time').textContent = totalTime;
+            document.getElementById('completed-deliveries').textContent = completed;
+            document.getElementById('remaining-deliveries').textContent = totalSteps - completed;
+
+            const progress = (completed / totalSteps) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+
+        // Simülasyonu başlat
+        function startSimulation() {
+            if (currentStep >= totalSteps) {
+                alert('Simülasyon zaten tamamlandı!');
+                return;
+            }
+
+            const step = deliverySteps[currentStep];
+            step.status = 'current';
+
+            // Driver'ı hedef konuma taşı
+            driverLocation = step.to;
+
+            // UI'ı güncelle
+            updateDriverInfo();
+            renderTimeline();
+
+            // 2 saniye sonra teslimatı tamamla
+            setTimeout(() => {
+                step.status = 'completed';
+                currentStep++;
+
+                renderTimeline();
+                updateStats();
+
+                if (currentStep < totalSteps) {
+                    // Bir sonraki adım için hazırla
+                    const nextStep = deliverySteps[currentStep];
+                    nextStep.from = driverLocation;
+
+                    setTimeout(() => {
+                        startSimulation();
+                    }, 1000);
+                } else {
+                    alert('🎉 Tüm teslimatlar tamamlandı!');
+                }
+            }, 2000);
+        }
+
+        // Konum güncelle
+        function updateLocation() {
+            const cities = ["Istanbul, Turkey", "Ankara, Turkey", "Izmir, Turkey", "Bursa, Turkey", "Antalya, Turkey"];
+            const randomCity = cities[Math.floor(Math.random() * cities.length)];
+
+            driverLocation = randomCity;
+            updateDriverInfo();
+
+            // Eğer aktif bir adım varsa, from konumunu güncelle
+            if (currentStep < totalSteps) {
+                deliverySteps[currentStep].from = driverLocation;
+                renderTimeline();
+            }
+        }
+
+        // Simülasyonu sıfırla
+        function resetSimulation() {
+            currentStep = 0;
+            driverLocation = "Ankara, Turkey";
+
+            deliverySteps.forEach(step => {
+                step.status = 'pending';
+                step.from = step.from.split(' → ')[0];
+            });
+
+            updateDriverInfo();
+            renderTimeline();
+            updateStats();
+        }
+
+        // Gerçek zamanlı güncelleme (her 5 saniyede bir)
+        setInterval(() => {
+            if (currentStep < totalSteps && deliverySteps[currentStep].status === 'current') {
+                // Aktif adım varsa animasyon efekti ekle
+                const currentItem = document.querySelector('.timeline-item.current');
+                if (currentItem) {
+                    currentItem.style.animation = 'pulse 1s infinite';
+                }
+            }
+        }, 5000);
+    </script>
+</body>
+
+</html>

@@ -1,16 +1,13 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { AssignShipmentCommand } from '../commands/assign-shipment.command';
 import { TypeOrmShipmentRepository } from '../../infrastructure/repositories/typeorm-shipment.repository';
-import { TypeOrmOutboxEventRepository } from '../../infrastructure/repositories/typeorm-outbox-event.repository';
-import { Shipment, ShipmentStatus } from '../../domain/entities/shipment.entity';
+import { Shipment } from '../../domain/entities/shipment.entity';
 import { ShipmentAssignedEvent } from '../../domain/events/shipment-assigned.event';
-import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
 
 @CommandHandler(AssignShipmentCommand)
 export class AssignShipmentHandler implements ICommandHandler<AssignShipmentCommand> {
     constructor(
         private readonly shipmentRepository: TypeOrmShipmentRepository,
-        private readonly outboxEventRepository: TypeOrmOutboxEventRepository,
         private readonly eventBus: EventBus
     ) { }
 
@@ -20,31 +17,14 @@ export class AssignShipmentHandler implements ICommandHandler<AssignShipmentComm
             throw new Error('Shipment not found');
         }
 
-        // Assign driver and update status
-        shipment.assignedDriverId = command.driverId;
-        shipment.status = ShipmentStatus.ASSIGNED;
+        const updatedShipment = await this.shipmentRepository.assignDriver(command.shipmentId, command.driverId);
 
-        const updatedShipment = await this.shipmentRepository.save(shipment);
-
-        // Create domain event
-        const event = new ShipmentAssignedEvent(
+        // Publish event
+        this.eventBus.publish(new ShipmentAssignedEvent(
             updatedShipment.id,
             command.driverId,
-            new Date()
-        );
-
-        // Store in outbox for reliable event publishing
-        const outboxEvent = new OutboxEvent();
-        outboxEvent.eventType = 'ShipmentAssigned';
-        outboxEvent.eventData = event;
-        outboxEvent.status = OutboxEventStatus.PENDING;
-        outboxEvent.routingKey = 'shipment.assigned';
-        outboxEvent.exchange = 'logistics';
-
-        await this.outboxEventRepository.save(outboxEvent);
-
-        // Publish event locally
-        this.eventBus.publish(event);
+            updatedShipment.updatedAt
+        ));
 
         return updatedShipment;
     }

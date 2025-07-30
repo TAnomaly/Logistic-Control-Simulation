@@ -1,0 +1,403 @@
+{
+    "info": {
+        "_postman_id": "logistic-control-test",
+        "name": "Logistic Control Simulation - Test Collection",
+        "description": "Mikroservis mimarisi test collection'ı",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "🔐 Authentication",
+            "item": [
+                {
+                    "name": "Planner API Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"planner@logistic.com\",\n    \"password\": \"planner123\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:3000/api/auth/planner/login",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3000",
+                            "path": [
+                                "api",
+                                "auth",
+                                "planner",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Driver API Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"licenseNumber\": \"TRAB123456\",\n    \"phoneNumber\": \"5551234567\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:3001/api/auth/driver/login",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3001",
+                            "path": [
+                                "api",
+                                "auth",
+                                "driver",
+                                "login"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📦 Planner API - Shipments",
+            "item": [
+                {
+                    "name": "Create Shipment",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{planner_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"origin\": \"Istanbul, Turkey\",\n    \"destination\": \"Ankara, Turkey\",\n    \"weight\": 1000,\n    \"priority\": \"high\",\n    \"estimatedDeliveryTime\": \"2024-01-15T10:00:00Z\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:3000/api/shipments",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3000",
+                            "path": [
+                                "api",
+                                "shipments"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Shipments",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{planner_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "http://localhost:3000/api/shipments",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3000",
+                            "path": [
+                                "api",
+                                "shipments"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Shipment by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{planner_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "http://localhost:3000/api/shipments/{{shipment_id}}",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3000",
+                            "path": [
+                                "api",
+                                "shipments",
+                                "{{shipment_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🚛 Driver API - Drivers",
+            "item": [
+                {
+                    "name": "Create Driver",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{driver_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Ahmet Yılmaz\",\n    \"licenseNumber\": \"TR123456\",\n    \"vehicleType\": \"truck\",\n    \"capacity\": 2000,\n    \"currentLocation\": \"Istanbul, Turkey\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:3001/drivers",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3001",
+                            "path": [
+                                "drivers"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Drivers",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{driver_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "http://localhost:3001/drivers",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3001",
+                            "path": [
+                                "drivers"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Assign Shipment to Driver",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{driver_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"shipmentId\": \"{{shipment_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:3001/drivers/{{driver_id}}/assign-shipment",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3001",
+                            "path": [
+                                "drivers",
+                                "{{driver_id}}",
+                                "assign-shipment"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Driver Location",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{driver_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"latitude\": 41.0082,\n    \"longitude\": 28.9784,\n    \"timestamp\": \"2024-01-15T10:00:00Z\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:3001/drivers/{{driver_id}}/location",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3001",
+                            "path": [
+                                "drivers",
+                                "{{driver_id}}",
+                                "location"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Driver Shipments",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{driver_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "http://localhost:3001/drivers/{{driver_id}}/shipments",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "3001",
+                            "path": [
+                                "drivers",
+                                "{{driver_id}}",
+                                "shipments"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🤖 ML Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "http://localhost:8000/health",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "8000",
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Optimize Route",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"origin\": \"Istanbul, Turkey\",\n    \"destination\": \"Ankara, Turkey\",\n    \"waypoints\": [\"Bursa, Turkey\"]\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8000/optimize-route",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "8000",
+                            "path": [
+                                "optimize-route"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🌐 Nginx Gateway",
+            "item": [
+                {
+                    "name": "Gateway Health Check",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "http://localhost/",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "path": [
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "planner_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "driver_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "shipment_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "driver_id",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}

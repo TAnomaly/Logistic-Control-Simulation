@@ -172,5 +172,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Webhook Consumer Service
+  webhook-consumer:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: logistic-webhook-consumer
+    environment:
+      - DRIVER_API_URL=http://driver-api:3001
+      - PLANNER_API_URL=http://planner-api:3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672
+    command: python /app/webhook_consumer_standalone.py
+    depends_on:
+      driver-api:
+        condition: service_started
+      planner-api:
+        condition: service_started
+      ml-service:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:

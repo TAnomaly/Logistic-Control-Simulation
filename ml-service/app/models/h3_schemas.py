@@ -21,7 +21,7 @@ class H3Resolution(str, Enum):
     RES_9 = "9"   # ~0.1 km² (174m)
     RES_10 = "10" # ~0.015 km² (66m)
     RES_11 = "11" # ~0.002 km² (24m)
-    RES_12 = "12" # ~0.0003 km² (9m)
+    RES_12 = "12" # ~0.0003 km² (9m) //For Hex Res.
 
 class TrafficCondition(str, Enum):
     LIGHT = "light"

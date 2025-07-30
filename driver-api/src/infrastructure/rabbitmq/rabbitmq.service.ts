@@ -23,7 +23,32 @@ export class RabbitMQService implements OnModuleInit {
     }
 
     async publishEvent(eventType: string, eventData: any, routingKey?: string): Promise<void> {
-        console.log(`📤 Event published: ${eventType} -> ${routingKey || 'default'}`, eventData);
+        const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@rabbitmq';
+        const EXCHANGE = 'logistics';
+        const ROUTING_KEY = routingKey || eventType;
+
+        try {
+            const connection = await amqp.connect(RABBITMQ_URL);
+            const channel = await connection.createChannel();
+
+            // Declare exchange
+            await channel.assertExchange(EXCHANGE, 'topic', { durable: true });
+
+            // Publish message
+            const message = JSON.stringify({
+                eventType,
+                data: eventData,
+                timestamp: new Date().toISOString()
+            });
+
+            await channel.publish(EXCHANGE, ROUTING_KEY, Buffer.from(message));
+            console.log(`📤 Event published: ${eventType} -> ${ROUTING_KEY}`, eventData);
+
+            await channel.close();
+            await connection.close();
+        } catch (error) {
+            console.error(`❌ Failed to publish event ${eventType}:`, error);
+        }
     }
 
     async consumeEvents(queueName: string, callback: (message: any) => Promise<void>): Promise<void> {
