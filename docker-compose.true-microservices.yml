@@ -146,19 +146,20 @@ services:
       - driver-api
     restart: unless-stopped
 
-  # ML Service (Python)
+  # ML Service (NestJS with H3)
   ml-service:
     build:
       context: ./ml-service
       dockerfile: Dockerfile
     container_name: logistic-ml-service
     environment:
-      - DRIVER_API_URL=http://driver-api:3001
-      - PLANNER_API_URL=http://planner-api:3000
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672
-      # OpenStreetMap is free, no API key needed
+      NODE_ENV: development
+      PORT: 8000
+      DRIVER_API_URL: http://driver-api:3001
+      PLANNER_API_URL: http://planner-api:3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
     ports:
       - "8000:8000"
     depends_on:
@@ -171,20 +172,30 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:8000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Webhook Consumer Service
+  # Webhook Consumer Service (NestJS)
   webhook-consumer:
     build:
       context: ./ml-service
       dockerfile: Dockerfile
     container_name: logistic-webhook-consumer
     environment:
-      - DRIVER_API_URL=http://driver-api:3001
-      - PLANNER_API_URL=http://planner-api:3000
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672
-    command: python /app/webhook_consumer_standalone.py
+      NODE_ENV: development
+      PORT: 8001
+      DRIVER_API_URL: http://driver-api:3001
+      PLANNER_API_URL: http://planner-api:3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+    ports:
+      - "8001:8001"
+    command: [ "node", "dist/main" ]
     depends_on:
       driver-api:
         condition: service_started
@@ -197,6 +208,32 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+
+  # Tracking Service (NestJS)
+  tracking-service:
+    build:
+      context: ./tracking-service
+      dockerfile: Dockerfile
+    container_name: logistic-tracking-service
+    environment:
+      NODE_ENV: development
+      PORT: 8002
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+    ports:
+      - "8002:8002"
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:8002/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres_data:

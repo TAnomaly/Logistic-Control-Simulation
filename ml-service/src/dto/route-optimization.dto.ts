@@ -1,32 +1,78 @@
+import { IsString, IsNumber, IsArray, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CoordinatesDto {
+    @IsNumber()
+    latitude: number;
+
+    @IsNumber()
+    longitude: number;
+}
+
 export class DeliveryPointDto {
+    @IsString()
+    id: string;
+
+    @IsString()
     address: string;
-    priority: 'high' | 'medium' | 'low';
-    estimatedTime?: number; // minutes
+
+    @ValidateNested()
+    @Type(() => CoordinatesDto)
+    coordinates: CoordinatesDto;
+
+    @IsOptional()
+    @IsString()
+    priority?: string;
+
+    @IsOptional()
+    @IsNumber()
     weight?: number;
+
+    @IsOptional()
+    @IsNumber()
+    volume?: number;
 }
 
-export class RouteOptimizationDto {
+export class OptimizeRouteRequestDto {
+    @IsString()
+    driverId: string;
+
+    @ValidateNested()
+    @Type(() => CoordinatesDto)
+    driverLocation: CoordinatesDto;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => DeliveryPointDto)
     deliveries: DeliveryPointDto[];
-    driverLocation: {
-        latitude: number;
-        longitude: number;
-    };
+
+    @IsOptional()
+    @IsNumber()
     vehicleCapacity?: number;
-    timeWindow?: {
-        start: string; // HH:mm
-        end: string;   // HH:mm
-    };
+
+    @IsOptional()
+    @IsNumber()
+    vehicleVolume?: number;
 }
 
-export class OptimizedRouteResponseDto {
-    optimizedRoute: {
-        address: string;
-        estimatedTime: number; // minutes
-        distance: number;      // km
-        order: number;
-    }[];
-    totalDistance: number;   // km
-    totalTime: number;       // minutes
-    fuelEstimate: number;    // liters
-    efficiency: number;      // percentage
+export class OptimizedRoutePointDto {
+    order: number;
+    deliveryId: string;
+    address: string;
+    coordinates: CoordinatesDto;
+    distanceFromPrevious: number;
+    estimatedTime: number;
+    cumulativeDistance: number;
+    cumulativeTime: number;
+}
+
+export class OptimizeRouteResponseDto {
+    driverId: string;
+    optimizedRoute: OptimizedRoutePointDto[];
+    totalDistance: number;
+    totalTime: number;
+    fuelEstimate: number;
+    efficiency: number;
+    algorithm: string;
+    message?: string;
 } 

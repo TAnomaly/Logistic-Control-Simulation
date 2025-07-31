@@ -1,7 +1,7 @@
 {
-    "name": "ml-service",
+    "name": "tracking-service",
     "version": "1.0.0",
-    "description": "ML Service for Route Optimization using NestJS and DDD with Uber H3",
+    "description": "Real-time Driver Tracking Service with Polyline Management",
     "author": "Logistic Control System",
     "private": true,
     "license": "UNLICENSED",
@@ -24,12 +24,15 @@
         "@nestjs/core": "^10.0.0",
         "@nestjs/platform-express": "^10.0.0",
         "@nestjs/cqrs": "^10.0.0",
+        "@nestjs/websockets": "^10.0.0",
+        "@nestjs/platform-socket.io": "^10.0.0",
         "class-validator": "^0.14.0",
         "class-transformer": "^0.5.1",
         "reflect-metadata": "^0.1.13",
         "rxjs": "^7.8.1",
-        "h3-js": "^4.1.0",
-        "amqplib": "^0.10.3"
+        "amqplib": "^0.10.3",
+        "socket.io": "^4.7.2",
+        "redis": "^4.6.7"
     },
     "devDependencies": {
         "@nestjs/cli": "^10.0.0",
@@ -40,6 +43,7 @@
         "@types/node": "^20.3.1",
         "@types/supertest": "^2.0.12",
         "@types/amqplib": "^0.10.4",
+        "@types/socket.io": "^3.0.2",
         "@typescript-eslint/eslint-plugin": "^6.0.0",
         "@typescript-eslint/parser": "^6.0.0",
         "eslint": "^8.42.0",
