@@ -88,7 +88,7 @@ add_random_offset() {
 get_admin_token() {
     print_status "Getting admin token..."
     
-    local response=$(curl -s -X POST "$API_GATEWAY_URL/api/auth/admin/login" \
+    local response=$(curl -s -X POST "$PLANNER_API_URL/api/auth/planner/login" \
         -H "Content-Type: application/json" \
         -d '{
             "email": "admin@logistic.com",

@@ -34,6 +34,26 @@ export class AuthService {
             };
         }
 
+        // Admin authentication
+        if (dto.email === 'admin@logistic.com' && dto.password === 'admin123') {
+            const payload = {
+                sub: 'admin-001',
+                email: dto.email,
+                role: UserRole.ADMIN,
+                adminId: 'admin-001',
+                permissions: ['shipment:read', 'shipment:create', 'shipment:assign', 'driver:read', 'driver:create'],
+            };
+
+            return {
+                access_token: await this.jwtService.signAsync(payload),
+                admin: {
+                    id: 'admin-001',
+                    email: dto.email,
+                    role: UserRole.ADMIN,
+                },
+            };
+        }
+
         throw new UnauthorizedException('Invalid credentials');
     }
 
