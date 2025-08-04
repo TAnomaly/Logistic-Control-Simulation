@@ -1,17 +1,16 @@
-import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { CreateDriverCommand } from '../commands/create-driver.command';
 import { TypeOrmDriverRepository } from '../../infrastructure/repositories/typeorm-driver.repository';
 import { TypeOrmOutboxEventRepository } from '../../infrastructure/repositories/typeorm-outbox-event.repository';
 import { Driver, DriverStatus } from '../../domain/entities/driver.entity';
 import { DriverCreatedEvent } from '../../domain/events/driver-created.event';
-import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
 
 @CommandHandler(CreateDriverCommand)
 export class CreateDriverHandler implements ICommandHandler<CreateDriverCommand> {
     constructor(
         private readonly driverRepository: TypeOrmDriverRepository,
-        private readonly outboxEventRepository: TypeOrmOutboxEventRepository,
-        private readonly eventBus: EventBus
+        private readonly outboxEventRepository: TypeOrmOutboxEventRepository
     ) { }
 
     async execute(command: CreateDriverCommand): Promise<Driver> {
@@ -43,9 +42,6 @@ export class CreateDriverHandler implements ICommandHandler<CreateDriverCommand>
         outboxEvent.exchange = 'logistics';
 
         await this.outboxEventRepository.save(outboxEvent);
-
-        // Also publish locally for immediate processing
-        this.eventBus.publish(event);
 
         return savedDriver;
     }

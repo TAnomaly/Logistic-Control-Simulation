@@ -1,7 +1,8 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from './outbox-event.entity';
+import { OutboxEventRepository } from './outbox-event.repository';
 import * as amqp from 'amqplib';
 
 @Injectable()

@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
 import * as amqp from 'amqplib';
 
 @Injectable()
@@ -25,17 +25,17 @@ export class OutboxProcessorService implements OnModuleInit {
             const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@rabbitmq:5672';
             this.connection = await amqp.connect(RABBITMQ_URL);
             this.channel = await this.connection.createChannel();
-
+            
             // Declare exchange
             await this.channel.assertExchange('logistics', 'topic', { durable: true });
-
+            
             this.logger.log('✅ Connected to RabbitMQ for outbox processing');
         } catch (error) {
-            this.logger.error('❌ Failed to connect to RabbitMQ for outbox processing:', error);
+            this.logger.error('❌ Failed to connect to RabbitMQ:', error);
         }
     }
 
-    private async startProcessing() {
+    private startProcessing() {
         setInterval(async () => {
             await this.processPendingEvents();
         }, 5000); // Process every 5 seconds
@@ -44,9 +44,7 @@ export class OutboxProcessorService implements OnModuleInit {
     private async processPendingEvents() {
         try {
             const pendingEvents = await this.outboxEventRepository.find({
-                where: { status: OutboxEventStatus.PENDING },
-                order: { createdAt: 'ASC' },
-                take: 10
+                where: { status: OutboxEventStatus.PENDING }
             });
 
             for (const event of pendingEvents) {
@@ -84,6 +82,15 @@ export class OutboxProcessorService implements OnModuleInit {
             await this.outboxEventRepository.save(event);
 
             this.logger.error(`❌ Failed to publish event ${event.eventType}:`, error);
+        }
+    }
+
+    async onModuleDestroy() {
+        if (this.channel) {
+            await this.channel.close();
+        }
+        if (this.connection) {
+            await this.connection.close();
         }
     }
 } 

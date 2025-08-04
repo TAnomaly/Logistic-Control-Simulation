@@ -1,11 +1,13 @@
-import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateDriverLocationCommand } from '../commands/update-driver-location.command';
 import { TypeOrmDriverRepository } from '../../infrastructure/repositories/typeorm-driver.repository';
+import { TypeOrmOutboxEventRepository } from '../../infrastructure/repositories/typeorm-outbox-event.repository';
 import { DriverLocationUpdatedEvent } from '../../domain/events/driver-location-updated.event';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { DriverLocation } from '../../domain/entities/driver-location.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
 
 @CommandHandler(UpdateDriverLocationCommand)
 export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriverLocationCommand> {
@@ -13,8 +15,8 @@ export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriver
         private readonly driverRepository: TypeOrmDriverRepository,
         @InjectRepository(DriverLocation)
         private readonly driverLocationRepository: Repository<DriverLocation>,
-        private readonly eventBus: EventBus,
-        private readonly redisService: RedisService,//RedisServıce Yapısı.
+        private readonly outboxEventRepository: TypeOrmOutboxEventRepository,
+        private readonly redisService: RedisService,
     ) { }
 
     async execute(command: UpdateDriverLocationCommand): Promise<void> {
@@ -49,9 +51,23 @@ export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriver
                 timestamp: new Date().toISOString(),
             });
 
-            // Publish domain event
+            // Create domain event and save to outbox
             const event = new DriverLocationUpdatedEvent(driverId, latitude, longitude, address || '');
-            this.eventBus.publish(event);
+            
+            const outboxEvent = new OutboxEvent();
+            outboxEvent.eventType = 'DriverLocationUpdated';
+            outboxEvent.eventData = {
+                driverId: event.driverId,
+                latitude: event.latitude,
+                longitude: event.longitude,
+                address: event.address,
+                timestamp: new Date().toISOString()
+            };
+            outboxEvent.status = OutboxEventStatus.PENDING;
+            outboxEvent.routingKey = 'driver.location.updated';
+            outboxEvent.exchange = 'logistics';
+
+            await this.outboxEventRepository.save(outboxEvent);
 
             console.log(`📍 Driver location updated: ${driverId} at ${latitude}, ${longitude}`);
         } catch (error) {

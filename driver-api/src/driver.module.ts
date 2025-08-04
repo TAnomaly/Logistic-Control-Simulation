@@ -10,7 +10,7 @@ import { DriverLocation } from './domain/entities/driver-location.entity';
 import { DriverAssignment } from './domain/entities/driver-assignment.entity';
 import { Shipment } from './domain/entities/shipment.entity';
 import { DriverRoute } from './domain/entities/driver-route.entity';
-import { OutboxEvent } from './domain/entities/outbox-event.entity';
+import { OutboxEvent } from '../../shared/outbox/outbox-event.entity';
 
 // Infrastructure Repositories
 import { TypeOrmDriverRepository } from './infrastructure/repositories/typeorm-driver.repository';
@@ -19,29 +19,53 @@ import { TypeOrmDriverAssignmentRepository } from './infrastructure/repositories
 import { TypeOrmShipmentRepository } from './infrastructure/repositories/typeorm-shipment.repository';
 import { TypeOrmDriverRouteRepository } from './infrastructure/repositories/typeorm-driver-route.repository';
 import { TypeOrmOutboxEventRepository } from './infrastructure/repositories/typeorm-outbox-event.repository';
-import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor.service';
+
+// Application Commands
+import { CreateDriverCommand } from './application/commands/create-driver.command';
+import { UpdateDriverLocationCommand } from './application/commands/update-driver-location.command';
+import { AssignShipmentCommand } from './application/commands/assign-shipment.command';
+
+// Application Queries
+import { GetDriversQuery } from './application/queries/get-drivers.query';
+import { GetDriverShipmentsQuery } from './application/queries/get-driver-shipments.query';
 
 // Application Handlers
 import { CreateDriverHandler } from './application/handlers/create-driver.handler';
 import { UpdateDriverLocationHandler } from './application/handlers/update-driver-location.handler';
+import { AssignShipmentHandler } from './application/handlers/assign-shipment.handler';
 import { GetDriversHandler } from './application/handlers/get-drivers.handler';
 import { GetDriverShipmentsHandler } from './application/handlers/get-driver-shipments.handler';
-import { AssignShipmentHandler } from './application/handlers/assign-shipment.handler';
+
+// Infrastructure Services
+import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor.service';
+import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
+import { RedisService } from './infrastructure/redis/redis.service';
+import { RouteService } from './services/route.service';
+import { CapacityService } from './services/capacity.service';
 
 // Controllers
 import { DriverController } from './controllers/driver.controller';
 import { RouteController } from './controllers/route.controller';
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
+import { JwtStrategy } from './auth/jwt.strategy';
 
-// Infrastructure Services
-import { RedisService } from './infrastructure/redis/redis.service';
-import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
+// Guards
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RolesGuard } from './auth/roles.guard';
 
-// Services
-import { CapacityService } from './services/capacity.service';
-import { RouteService } from './services/route.service';
+const CommandHandlers = [
+    CreateDriverHandler,
+    UpdateDriverLocationHandler,
+    AssignShipmentHandler,
+];
 
-// Auth Module
-import { AuthModule } from './auth/auth.module';
+const QueryHandlers = [
+    GetDriversHandler,
+    GetDriverShipmentsHandler,
+];
+
+const EventHandlers: any[] = [];
 
 @Module({
     imports: [
@@ -54,40 +78,78 @@ import { AuthModule } from './auth/auth.module';
             password: process.env.DB_PASSWORD || 'postgres',
             database: process.env.DB_NAME || 'driver_db',
             entities: [Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent],
-            synchronize: true, // Development only
-            logging: true,
+            synchronize: process.env.NODE_ENV !== 'production',
+            logging: process.env.NODE_ENV === 'development',
         }),
         TypeOrmModule.forFeature([Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent]),
-        CqrsModule,
-        AuthModule,
+        CqrsModule.forRoot(),
         JwtModule.register({
-            secret: process.env.JWT_SECRET || 'your-super-secret-key-here',
-            signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '15m' },
+            secret: process.env.JWT_SECRET || 'your-secret-key',
+            signOptions: { expiresIn: '1h' },
         }),
     ],
-    controllers: [DriverController, RouteController],
+    controllers: [
+        DriverController,
+        RouteController,
+        AuthController,
+    ],
     providers: [
-        // Repository Implementations
-        TypeOrmDriverRepository,
-        TypeOrmDriverLocationRepository,
-        TypeOrmDriverAssignmentRepository,
-        TypeOrmShipmentRepository,
-        TypeOrmDriverRouteRepository,
-        TypeOrmOutboxEventRepository,
-        OutboxProcessorService,
-        // Command Handlers
-        CreateDriverHandler,
-        UpdateDriverLocationHandler,
-        AssignShipmentHandler,
-        // Query Handlers
-        GetDriversHandler,
-        GetDriverShipmentsHandler,
-        // Infrastructure Services
-        RedisService,
-        RabbitMQService,
+        // Repositories
+        {
+            provide: 'DriverRepository',
+            useClass: TypeOrmDriverRepository,
+        },
+        {
+            provide: 'DriverLocationRepository',
+            useClass: TypeOrmDriverLocationRepository,
+        },
+        {
+            provide: 'DriverAssignmentRepository',
+            useClass: TypeOrmDriverAssignmentRepository,
+        },
+        {
+            provide: 'ShipmentRepository',
+            useClass: TypeOrmShipmentRepository,
+        },
+        {
+            provide: 'DriverRouteRepository',
+            useClass: TypeOrmDriverRouteRepository,
+        },
+        {
+            provide: 'OutboxEventRepository',
+            useClass: TypeOrmOutboxEventRepository,
+        },
+        
         // Services
-        CapacityService,
+        OutboxProcessorService,
+        RabbitMQService,
+        RedisService,
         RouteService,
+        CapacityService,
+        AuthService,
+        JwtStrategy,
+        
+        // Guards
+        JwtAuthGuard,
+        RolesGuard,
+        
+        // Command and Query Handlers
+        ...CommandHandlers,
+        ...QueryHandlers,
+        ...EventHandlers,
+    ],
+    exports: [
+        'DriverRepository',
+        'DriverLocationRepository',
+        'DriverAssignmentRepository',
+        'ShipmentRepository',
+        'DriverRouteRepository',
+        'OutboxEventRepository',
+        OutboxProcessorService,
+        RabbitMQService,
+        RedisService,
+        RouteService,
+        CapacityService,
     ],
 })
-export class DriverModule { } 
+export class DriverModule {} 

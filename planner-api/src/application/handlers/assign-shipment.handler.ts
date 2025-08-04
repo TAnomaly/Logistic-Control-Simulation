@@ -1,17 +1,16 @@
-import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { AssignShipmentCommand } from '../commands/assign-shipment.command';
 import { TypeOrmShipmentRepository } from '../../infrastructure/repositories/typeorm-shipment.repository';
 import { TypeOrmOutboxEventRepository } from '../../infrastructure/repositories/typeorm-outbox-event.repository';
 import { Shipment } from '../../domain/entities/shipment.entity';
 import { ShipmentAssignedEvent } from '../../domain/events/shipment-assigned.event';
-import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
 
 @CommandHandler(AssignShipmentCommand)
 export class AssignShipmentHandler implements ICommandHandler<AssignShipmentCommand> {
     constructor(
         private readonly shipmentRepository: TypeOrmShipmentRepository,
-        private readonly outboxEventRepository: TypeOrmOutboxEventRepository,
-        private readonly eventBus: EventBus
+        private readonly outboxEventRepository: TypeOrmOutboxEventRepository
     ) { }
 
     async execute(command: AssignShipmentCommand): Promise<Shipment> {
@@ -42,9 +41,6 @@ export class AssignShipmentHandler implements ICommandHandler<AssignShipmentComm
         outboxEvent.exchange = 'logistics';
 
         await this.outboxEventRepository.save(outboxEvent);
-
-        // Also publish locally for immediate processing
-        this.eventBus.publish(event);
 
         return updatedShipment;
     }
