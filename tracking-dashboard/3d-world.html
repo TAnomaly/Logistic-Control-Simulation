@@ -7,8 +7,8 @@
     <title>🌍 3D Dünya Driver Tracking</title>
 
     <!-- Cesium.js -->
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
-    <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
     <!-- Socket.IO -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -415,7 +415,7 @@
     <div class="loading" id="loading">🌍 3D Dünya yükleniyor...</div>
 
     <script>
-        // Cesium access token - ücretsiz token
+        // Cesium access token - ücretsiz token (daha güvenilir)
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6NTc3MzMsImlhdCI6MTYyMjY0NjQ5NH0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxY';
 
         class CesiumTrackingDashboard {
@@ -440,7 +440,7 @@
             initCesium() {
                 // Initialize Cesium viewer with better configuration
                 this.viewer = new Cesium.Viewer('cesiumContainer', {
-                    terrainProvider: Cesium.createWorldTerrain(),
+                    terrainProvider: Cesium.Terrain.fromWorldTerrain(),
                     baseLayerPicker: false,
                     geocoder: false,
                     homeButton: false,
@@ -520,60 +520,76 @@
             toggleSatelliteMode() {
                 const btn = document.getElementById('toggleSatellite');
                 const isActive = btn.classList.contains('active');
-                
-                if (isActive) {
-                    // Switch back to OpenStreetMap
-                    this.viewer.imageryLayers.removeAll();
-                    this.viewer.imageryLayers.addImageryProvider(new Cesium.OpenStreetMapImageryProvider({
-                        url: 'https://a.tile.openstreetmap.org/'
-                    }));
-                    btn.classList.remove('active');
-                } else {
-                    // Switch to satellite
-                    this.viewer.imageryLayers.removeAll();
-                    this.viewer.imageryLayers.addImageryProvider(new Cesium.IonImageryProvider({
-                        assetId: 3845 // Bing Maps Aerial
-                    }));
-                    btn.classList.add('active');
+
+                try {
+                    if (isActive) {
+                        // Switch back to OpenStreetMap
+                        this.viewer.imageryLayers.removeAll();
+                        this.viewer.imageryLayers.addImageryProvider(new Cesium.OpenStreetMapImageryProvider({
+                            url: 'https://a.tile.openstreetmap.org/'
+                        }));
+                        btn.classList.remove('active');
+                    } else {
+                        // Switch to satellite
+                        this.viewer.imageryLayers.removeAll();
+                        this.viewer.imageryLayers.addImageryProvider(new Cesium.IonImageryProvider({
+                            assetId: 3845 // Bing Maps Aerial
+                        }));
+                        btn.classList.add('active');
+                    }
+                } catch (error) {
+                    console.error('Error toggling satellite mode:', error);
                 }
             }
 
             toggleTerrainMode() {
                 const btn = document.getElementById('toggleTerrain');
                 const isActive = btn.classList.contains('active');
-                
-                if (isActive) {
-                    this.viewer.terrainProvider = Cesium.createWorldTerrain();
-                    btn.classList.remove('active');
-                } else {
-                    this.viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-                    btn.classList.add('active');
+
+                try {
+                    if (isActive) {
+                        this.viewer.terrainProvider = Cesium.Terrain.fromWorldTerrain();
+                        btn.classList.remove('active');
+                    } else {
+                        this.viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+                        btn.classList.add('active');
+                    }
+                } catch (error) {
+                    console.error('Error toggling terrain mode:', error);
                 }
             }
 
             toggleAtmosphereMode() {
                 const btn = document.getElementById('toggleAtmosphere');
                 const isActive = btn.classList.contains('active');
-                
-                if (isActive) {
-                    this.viewer.scene.skyAtmosphere.show = true;
-                    btn.classList.remove('active');
-                } else {
-                    this.viewer.scene.skyAtmosphere.show = false;
-                    btn.classList.add('active');
+
+                try {
+                    if (isActive) {
+                        this.viewer.scene.skyAtmosphere.show = true;
+                        btn.classList.remove('active');
+                    } else {
+                        this.viewer.scene.skyAtmosphere.show = false;
+                        btn.classList.add('active');
+                    }
+                } catch (error) {
+                    console.error('Error toggling atmosphere mode:', error);
                 }
             }
 
             resetView() {
-                this.viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(32.8597, 39.9334, 2000000),
-                    orientation: {
-                        heading: 0.0,
-                        pitch: -Cesium.Math.PI_OVER_TWO,
-                        roll: 0.0
-                    },
-                    duration: 2.0
-                });
+                try {
+                    this.viewer.camera.flyTo({
+                        destination: Cesium.Cartesian3.fromDegrees(32.8597, 39.9334, 2000000),
+                        orientation: {
+                            heading: 0.0,
+                            pitch: -Cesium.Math.PI_OVER_TWO,
+                            roll: 0.0
+                        },
+                        duration: 2.0
+                    });
+                } catch (error) {
+                    console.error('Error resetting view:', error);
+                }
             }
 
             startPolling() {
@@ -587,9 +603,13 @@
             async fetchDrivers() {
                 try {
                     const response = await fetch('http://localhost:8002/api/drivers');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
                     const data = await response.json();
 
-                    if (data.drivers) {
+                    if (data.drivers && Array.isArray(data.drivers)) {
                         data.drivers.forEach(driver => {
                             this.updateDriver(driver);
                         });
@@ -600,336 +620,417 @@
             }
 
             updateDriver(driverData) {
-                const driverId = driverData.driverId || driverData.id;
-                if (!driverId) return;
+                try {
+                    const driverId = driverData.driverId || driverData.id;
+                    if (!driverId) return;
 
-                this.drivers.set(driverId, driverData);
-                this.updateDriverInList(driverData);
-                this.updateDriverOnMap(driverData);
-                this.updateStats();
+                    this.drivers.set(driverId, driverData);
+                    this.updateDriverInList(driverData);
+                    this.updateDriverOnMap(driverData);
+                    this.updateStats();
+                } catch (error) {
+                    console.error('Error updating driver:', error);
+                }
             }
 
             updateDriverInList(driver) {
-                const driversList = document.getElementById('drivers-list');
-                const existingCard = document.getElementById(`driver-${driver.driverId}`);
+                try {
+                    const driversList = document.getElementById('drivers-list');
+                    const existingCard = document.getElementById(`driver-${driver.driverId}`);
 
-                if (existingCard) {
-                    const status = this.getDriverStatus(driver);
-                    const location = this.getLocationName(driver.currentLocation);
+                    if (existingCard) {
+                        const status = this.getDriverStatus(driver);
+                        const location = this.getLocationName(driver.currentLocation);
 
-                    existingCard.querySelector('.driver-status').innerHTML = `
-                        <span class="status-indicator status-${status.type}"></span>
-                        ${status.text}
-                    `;
-                    existingCard.querySelector('.driver-location').textContent = location;
+                        existingCard.querySelector('.driver-status').innerHTML = `
+                            <span class="status-indicator status-${status.type}"></span>
+                            ${status.text}
+                        `;
+                        existingCard.querySelector('.driver-location').textContent = location;
 
-                    if (driver.shipmentCount) {
-                        existingCard.querySelector('.shipment-count').textContent = driver.shipmentCount;
+                        if (driver.shipmentCount) {
+                            existingCard.querySelector('.shipment-count').textContent = driver.shipmentCount;
+                        }
+                    } else {
+                        this.renderDriversList();
                     }
-                } else {
-                    this.renderDriversList();
+                } catch (error) {
+                    console.error('Error updating driver in list:', error);
                 }
             }
 
             renderDriversList() {
-                const driversList = document.getElementById('drivers-list');
-                let html = '';
+                try {
+                    const driversList = document.getElementById('drivers-list');
+                    let html = '';
 
-                this.drivers.forEach((driver, driverId) => {
-                    const isActive = this.selectedDriver === driverId;
-                    const status = this.getDriverStatus(driver);
-                    const location = this.getLocationName(driver.currentLocation);
+                    this.drivers.forEach((driver, driverId) => {
+                        const isActive = this.selectedDriver === driverId;
+                        const status = this.getDriverStatus(driver);
+                        const location = this.getLocationName(driver.currentLocation);
 
-                    html += `
-                        <div class="driver-card ${isActive ? 'active' : ''}" onclick="dashboard.selectDriver('${driverId}')" id="driver-${driverId}">
-                            <div class="driver-info">
-                                <div class="driver-avatar">🚛</div>
-                                <div class="driver-details">
-                                    <div class="driver-name">${driver.name || 'Bilinmeyen Sürücü'}</div>
-                                    <div class="driver-status">
-                                        <span class="status-indicator status-${status.type}"></span>
-                                        ${status.text}
+                        html += `
+                            <div class="driver-card ${isActive ? 'active' : ''}" onclick="dashboard.selectDriver('${driverId}')" id="driver-${driverId}">
+                                <div class="driver-info">
+                                    <div class="driver-avatar">🚛</div>
+                                    <div class="driver-details">
+                                        <div class="driver-name">${driver.name || 'Bilinmeyen Sürücü'}</div>
+                                        <div class="driver-status">
+                                            <span class="status-indicator status-${status.type}"></span>
+                                            ${status.text}
+                                        </div>
+                                        <div class="driver-location">📍 ${location}</div>
                                     </div>
-                                    <div class="driver-location">📍 ${location}</div>
                                 </div>
+                                ${driver.shipmentCount ? `
+                                    <div class="shipment-info">
+                                        📦 <span class="shipment-count">${driver.shipmentCount}</span> kargo
+                                    </div>
+                                ` : ''}
                             </div>
-                            ${driver.shipmentCount ? `
-                                <div class="shipment-info">
-                                    📦 <span class="shipment-count">${driver.shipmentCount}</span> kargo
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
+                        `;
+                    });
 
-                driversList.innerHTML = html;
+                    driversList.innerHTML = html;
+                } catch (error) {
+                    console.error('Error rendering drivers list:', error);
+                }
             }
 
             updateDriverOnMap(driver) {
-                const driverId = driver.driverId;
-                const location = driver.currentLocation;
+                try {
+                    const driverId = driver.driverId;
+                    const location = driver.currentLocation;
 
-                if (!location || !location.coordinates) return;
+                    if (!location || !location.coordinates) return;
 
-                const lat = parseFloat(location.coordinates.latitude);
-                const lng = parseFloat(location.coordinates.longitude);
-                const height = 100; // Height above ground
+                    const lat = parseFloat(location.coordinates.latitude);
+                    const lng = parseFloat(location.coordinates.longitude);
+                    const height = 100; // Height above ground
 
-                let entity = this.entities.get(driverId);
+                    if (isNaN(lat) || isNaN(lng)) {
+                        console.warn('Invalid coordinates for driver:', driverId);
+                        return;
+                    }
 
-                if (!entity) {
-                    // Create new 3D truck entity with better visualization
-                    entity = this.viewer.entities.add({
-                        id: driverId,
-                        position: Cesium.Cartesian3.fromDegrees(lng, lat, height),
-                        point: {
-                            pixelSize: 20,
-                            color: Cesium.Color.CYAN,
-                            outlineColor: Cesium.Color.WHITE,
-                            outlineWidth: 2,
-                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-                        },
-                        label: {
-                            text: driver.name || 'Bilinmeyen Sürücü',
-                            font: '14pt sans-serif',
-                            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                            outlineWidth: 2,
-                            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                            pixelOffset: new Cesium.Cartesian2(0, -40),
-                            fillColor: Cesium.Color.WHITE,
-                            outlineColor: Cesium.Color.BLACK,
-                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-                        },
-                        billboard: {
-                            image: 'data:image/svg+xml;base64,' + btoa(`
-                                <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="16" cy="16" r="16" fill="#00d4ff" stroke="white" stroke-width="2"/>
-                                    <text x="16" y="20" text-anchor="middle" fill="white" font-size="16">🚛</text>
-                                </svg>
-                            `),
-                            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                            pixelOffset: new Cesium.Cartesian2(0, -32),
-                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-                        }
-                    });
+                    let entity = this.entities.get(driverId);
 
-                    this.entities.set(driverId, entity);
+                    if (!entity) {
+                        // Create new 3D truck entity with better visualization
+                        entity = this.viewer.entities.add({
+                            id: driverId,
+                            position: Cesium.Cartesian3.fromDegrees(lng, lat, height),
+                            point: {
+                                pixelSize: 20,
+                                color: Cesium.Color.CYAN,
+                                outlineColor: Cesium.Color.WHITE,
+                                outlineWidth: 2,
+                                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                            },
+                            label: {
+                                text: driver.name || 'Bilinmeyen Sürücü',
+                                font: '14pt sans-serif',
+                                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                                outlineWidth: 2,
+                                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                                pixelOffset: new Cesium.Cartesian2(0, -40),
+                                fillColor: Cesium.Color.WHITE,
+                                outlineColor: Cesium.Color.BLACK,
+                                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                            },
+                            billboard: {
+                                image: 'data:image/svg+xml;base64,' + btoa(`
+                                    <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="16" cy="16" r="16" fill="#00d4ff" stroke="white" stroke-width="2"/>
+                                        <text x="16" y="20" text-anchor="middle" fill="white" font-size="12">TRUCK</text>
+                                    </svg>
+                                `),
+                                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                                pixelOffset: new Cesium.Cartesian2(0, -32),
+                                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                            }
+                        });
 
-                    // Add click event
-                    entity.description = new Cesium.ConstantProperty(this.createTruckPopup(driver));
-                } else {
-                    // Update position
-                    entity.position = Cesium.Cartesian3.fromDegrees(lng, lat, height);
-                    
-                    // Update description
-                    entity.description = new Cesium.ConstantProperty(this.createTruckPopup(driver));
+                        this.entities.set(driverId, entity);
+
+                        // Add click event
+                        entity.description = new Cesium.ConstantProperty(this.createTruckPopup(driver));
+                    } else {
+                        // Update position
+                        entity.position = Cesium.Cartesian3.fromDegrees(lng, lat, height);
+
+                        // Update description
+                        entity.description = new Cesium.ConstantProperty(this.createTruckPopup(driver));
+                    }
+
+                    // Update polyline
+                    this.updatePolyline(driver);
+                } catch (error) {
+                    console.error('Error updating driver on map:', error);
                 }
-
-                // Update polyline
-                this.updatePolyline(driver);
             }
 
             updatePolyline(driver) {
-                const driverId = driver.driverId;
-                
-                // Remove existing polyline
-                if (this.polylines.has(driverId)) {
-                    this.viewer.entities.remove(this.polylines.get(driverId));
-                }
+                try {
+                    const driverId = driver.driverId;
 
-                if (!driver.polyline || !driver.polyline.locations || driver.polyline.locations.length < 2) return;
-
-                const positions = driver.polyline.locations.map(location => 
-                    Cesium.Cartesian3.fromDegrees(
-                        location.coordinates.longitude,
-                        location.coordinates.latitude,
-                        100
-                    )
-                );
-
-                const polylineEntity = this.viewer.entities.add({
-                    polyline: {
-                        positions: positions,
-                        width: 4,
-                        material: Cesium.Color.CYAN,
-                        clampToGround: false
+                    // Remove existing polyline
+                    if (this.polylines.has(driverId)) {
+                        this.viewer.entities.remove(this.polylines.get(driverId));
                     }
-                });
 
-                this.polylines.set(driverId, polylineEntity);
+                    if (!driver.polyline || !driver.polyline.locations || driver.polyline.locations.length < 2) return;
+
+                    const positions = driver.polyline.locations.map(location => {
+                        const lat = parseFloat(location.coordinates.latitude);
+                        const lng = parseFloat(location.coordinates.longitude);
+
+                        if (isNaN(lat) || isNaN(lng)) {
+                            return null;
+                        }
+
+                        return Cesium.Cartesian3.fromDegrees(lng, lat, 100);
+                    }).filter(pos => pos !== null);
+
+                    if (positions.length < 2) return;
+
+                    const polylineEntity = this.viewer.entities.add({
+                        polyline: {
+                            positions: positions,
+                            width: 4,
+                            material: Cesium.Color.CYAN,
+                            clampToGround: false
+                        }
+                    });
+
+                    this.polylines.set(driverId, polylineEntity);
+                } catch (error) {
+                    console.error('Error updating polyline:', error);
+                }
             }
 
             createTruckPopup(driver) {
-                const location = driver.currentLocation;
-                const speed = location?.speed || 0;
-                const heading = location?.heading || 0;
-                const status = this.getDriverStatus(driver);
+                try {
+                    const location = driver.currentLocation;
+                    const speed = location?.speed || 0;
+                    const heading = location?.heading || 0;
+                    const status = this.getDriverStatus(driver);
 
-                return `
-                    <div style="padding: 10px; max-width: 300px;">
-                        <h3 style="margin: 0 0 10px 0; color: #00d4ff;">🚛 ${driver.name || 'Bilinmeyen Sürücü'}</h3>
-                        <p><strong>📍 Konum:</strong> ${this.getLocationName(location)}</p>
-                        <p><strong>🚗 Hız:</strong> ${speed} km/h</p>
-                        <p><strong>🧭 Yön:</strong> ${this.getDirectionText(heading)}</p>
-                        <p><strong>📊 Durum:</strong> <span style="color: ${status.type === 'active' ? '#00ff88' : status.type === 'idle' ? '#ffaa00' : '#ff4444'}">${status.text}</span></p>
-                        <p><strong>⏰ Son Güncelleme:</strong> ${this.formatTime(driver.lastUpdate)}</p>
-                        ${driver.shipmentCount ? `<p><strong>📦 Kargo Sayısı:</strong> ${driver.shipmentCount}</p>` : ''}
-                        <button onclick="dashboard.selectDriver('${driver.driverId}')" style="margin-top: 10px; padding: 8px 16px; background: #00d4ff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            📋 Detayları Göster
-                        </button>
-                    </div>
-                `;
+                    return `
+                        <div style="padding: 10px; max-width: 300px;">
+                            <h3 style="margin: 0 0 10px 0; color: #00d4ff;">🚛 ${driver.name || 'Bilinmeyen Sürücü'}</h3>
+                            <p><strong>📍 Konum:</strong> ${this.getLocationName(location)}</p>
+                            <p><strong>🚗 Hız:</strong> ${speed} km/h</p>
+                            <p><strong>🧭 Yön:</strong> ${this.getDirectionText(heading)}</p>
+                            <p><strong>📊 Durum:</strong> <span style="color: ${status.type === 'active' ? '#00ff88' : status.type === 'idle' ? '#ffaa00' : '#ff4444'}">${status.text}</span></p>
+                            <p><strong>⏰ Son Güncelleme:</strong> ${this.formatTime(driver.lastUpdate)}</p>
+                            ${driver.shipmentCount ? `<p><strong>📦 Kargo Sayısı:</strong> ${driver.shipmentCount}</p>` : ''}
+                            <button onclick="dashboard.selectDriver('${driver.driverId}')" style="margin-top: 10px; padding: 8px 16px; background: #00d4ff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                📋 Detayları Göster
+                            </button>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Error creating truck popup:', error);
+                    return '<div>Hata oluştu</div>';
+                }
             }
 
             selectDriver(driverId) {
-                this.selectedDriver = driverId;
-                this.renderDriversList();
-                this.showRealTimeInfo(driverId);
-                
-                // Fly to driver location
-                const driver = this.drivers.get(driverId);
-                if (driver && driver.currentLocation?.coordinates) {
-                    const lat = driver.currentLocation.coordinates.latitude;
-                    const lng = driver.currentLocation.coordinates.longitude;
-                    
-                    this.viewer.camera.flyTo({
-                        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 50000),
-                        duration: 2.0
-                    });
+                try {
+                    this.selectedDriver = driverId;
+                    this.renderDriversList();
+                    this.showRealTimeInfo(driverId);
+
+                    // Fly to driver location
+                    const driver = this.drivers.get(driverId);
+                    if (driver && driver.currentLocation?.coordinates) {
+                        const lat = driver.currentLocation.coordinates.latitude;
+                        const lng = driver.currentLocation.coordinates.longitude;
+
+                        this.viewer.camera.flyTo({
+                            destination: Cesium.Cartesian3.fromDegrees(lng, lat, 50000),
+                            duration: 2.0
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error selecting driver:', error);
                 }
             }
 
             showRealTimeInfo(driverId) {
-                const driver = this.drivers.get(driverId);
-                if (!driver) return;
+                try {
+                    const driver = this.drivers.get(driverId);
+                    if (!driver) return;
 
-                const status = this.getDriverStatus(driver);
+                    const status = this.getDriverStatus(driver);
 
-                document.getElementById('selected-driver-name').textContent = driver.name || 'Bilinmeyen Sürücü';
-                document.getElementById('driver-status').innerHTML = `<span style="color: ${status.type === 'active' ? '#00ff88' : status.type === 'idle' ? '#ffaa00' : '#ff4444'}">${status.text}</span>`;
-                document.getElementById('current-location').textContent = this.getLocationName(driver.currentLocation);
-                document.getElementById('current-speed').textContent = driver.currentLocation?.speed || 0;
-                document.getElementById('current-heading').textContent = this.getDirectionText(driver.currentLocation?.heading);
-                document.getElementById('last-update').textContent = this.formatTime(driver.lastUpdate);
-                document.getElementById('shipment-count').textContent = driver.shipmentCount || 0;
+                    document.getElementById('selected-driver-name').textContent = driver.name || 'Bilinmeyen Sürücü';
+                    document.getElementById('driver-status').innerHTML = `<span style="color: ${status.type === 'active' ? '#00ff88' : status.type === 'idle' ? '#ffaa00' : '#ff4444'}">${status.text}</span>`;
+                    document.getElementById('current-location').textContent = this.getLocationName(driver.currentLocation);
+                    document.getElementById('current-speed').textContent = driver.currentLocation?.speed || 0;
+                    document.getElementById('current-heading').textContent = this.getDirectionText(driver.currentLocation?.heading);
+                    document.getElementById('last-update').textContent = this.formatTime(driver.lastUpdate);
+                    document.getElementById('shipment-count').textContent = driver.shipmentCount || 0;
 
-                const recentDistance = this.calculateRecentDistance(driver);
-                document.getElementById('recent-distance').textContent = recentDistance.toFixed(2);
+                    const recentDistance = this.calculateRecentDistance(driver);
+                    document.getElementById('recent-distance').textContent = recentDistance.toFixed(2);
 
-                document.getElementById('real-time-info').style.display = 'block';
+                    document.getElementById('real-time-info').style.display = 'block';
+                } catch (error) {
+                    console.error('Error showing real-time info:', error);
+                }
             }
 
             updateStats() {
-                let activeDrivers = 0;
-                let totalShipments = 0;
-                let totalSpeed = 0;
-                let totalDistance = 0;
+                try {
+                    let activeDrivers = 0;
+                    let totalShipments = 0;
+                    let totalSpeed = 0;
+                    let totalDistance = 0;
 
-                this.drivers.forEach(driver => {
-                    const status = this.getDriverStatus(driver);
-                    if (status.type === 'active') activeDrivers++;
-                    
-                    totalShipments += driver.shipmentCount || 0;
-                    totalSpeed += driver.currentLocation?.speed || 0;
-                    totalDistance += this.calculateRecentDistance(driver);
-                });
+                    this.drivers.forEach(driver => {
+                        const status = this.getDriverStatus(driver);
+                        if (status.type === 'active') activeDrivers++;
 
-                const avgSpeed = this.drivers.size > 0 ? totalSpeed / this.drivers.size : 0;
+                        totalShipments += driver.shipmentCount || 0;
+                        totalSpeed += driver.currentLocation?.speed || 0;
+                        totalDistance += this.calculateRecentDistance(driver);
+                    });
 
-                document.getElementById('active-drivers').textContent = activeDrivers;
-                document.getElementById('total-shipments').textContent = totalShipments;
-                document.getElementById('avg-speed').textContent = `${avgSpeed.toFixed(1)} km/h`;
-                document.getElementById('total-distance').textContent = `${totalDistance.toFixed(1)} km`;
+                    const avgSpeed = this.drivers.size > 0 ? totalSpeed / this.drivers.size : 0;
+
+                    document.getElementById('active-drivers').textContent = activeDrivers;
+                    document.getElementById('total-shipments').textContent = totalShipments;
+                    document.getElementById('avg-speed').textContent = `${avgSpeed.toFixed(1)} km/h`;
+                    document.getElementById('total-distance').textContent = `${totalDistance.toFixed(1)} km`;
+                } catch (error) {
+                    console.error('Error updating stats:', error);
+                }
             }
 
             getDriverStatus(driver) {
-                const now = new Date();
-                const lastUpdate = new Date(driver.lastUpdate || driver.lastActiveAt);
-                const timeDiff = (now - lastUpdate) / 1000 / 60;
+                try {
+                    const now = new Date();
+                    const lastUpdate = new Date(driver.lastUpdate || driver.lastActiveAt);
+                    const timeDiff = (now - lastUpdate) / 1000 / 60;
 
-                if (timeDiff > 5) {
-                    return { type: 'offline', text: 'Çevrimdışı' };
-                }
+                    if (timeDiff > 5) {
+                        return { type: 'offline', text: 'Çevrimdışı' };
+                    }
 
-                const speed = driver.currentLocation?.speed || 0;
-                if (speed > 5) {
-                    return { type: 'active', text: 'Teslimat Yapıyor' };
-                } else {
-                    return { type: 'idle', text: 'Yükleme/Bekleme' };
+                    const speed = driver.currentLocation?.speed || 0;
+                    if (speed > 5) {
+                        return { type: 'active', text: 'Teslimat Yapıyor' };
+                    } else {
+                        return { type: 'idle', text: 'Yükleme/Bekleme' };
+                    }
+                } catch (error) {
+                    console.error('Error getting driver status:', error);
+                    return { type: 'offline', text: 'Bilinmiyor' };
                 }
             }
 
             getLocationName(location) {
-                if (!location || !location.coordinates) return 'Bilinmiyor';
+                try {
+                    if (!location || !location.coordinates) return 'Bilinmiyor';
 
-                const lat = location.coordinates.latitude;
-                const lng = location.coordinates.longitude;
+                    const lat = location.coordinates.latitude;
+                    const lng = location.coordinates.longitude;
 
-                if (lat >= 41.0 && lat <= 41.1 && lng >= 28.9 && lng <= 29.0) return 'İstanbul';
-                if (lat >= 39.9 && lat <= 40.0 && lng >= 32.8 && lng <= 32.9) return 'Ankara';
-                if (lat >= 38.4 && lat <= 38.5 && lng >= 27.1 && lng <= 27.2) return 'İzmir';
-                if (lat >= 40.1 && lat <= 40.2 && lng >= 29.0 && lng <= 29.1) return 'Bursa';
-                if (lat >= 36.8 && lat <= 36.9 && lng >= 30.7 && lng <= 30.8) return 'Antalya';
+                    if (lat >= 41.0 && lat <= 41.1 && lng >= 28.9 && lng <= 29.0) return 'İstanbul';
+                    if (lat >= 39.9 && lat <= 40.0 && lng >= 32.8 && lng <= 32.9) return 'Ankara';
+                    if (lat >= 38.4 && lat <= 38.5 && lng >= 27.1 && lng <= 27.2) return 'İzmir';
+                    if (lat >= 40.1 && lat <= 40.2 && lng >= 29.0 && lng <= 29.1) return 'Bursa';
+                    if (lat >= 36.8 && lat <= 36.9 && lng >= 30.7 && lng <= 30.8) return 'Antalya';
 
-                return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                } catch (error) {
+                    console.error('Error getting location name:', error);
+                    return 'Bilinmiyor';
+                }
             }
 
             getDirectionText(heading) {
-                if (!heading) return 'Bilinmiyor';
+                try {
+                    if (!heading) return 'Bilinmiyor';
 
-                const directions = ['Kuzey', 'Kuzeydoğu', 'Doğu', 'Güneydoğu', 'Güney', 'Güneybatı', 'Batı', 'Kuzeybatı'];
-                const index = Math.round(heading / 45) % 8;
-                return `${directions[index]} (${heading}°)`;
+                    const directions = ['Kuzey', 'Kuzeydoğu', 'Doğu', 'Güneydoğu', 'Güney', 'Güneybatı', 'Batı', 'Kuzeybatı'];
+                    const index = Math.round(heading / 45) % 8;
+                    return `${directions[index]} (${heading}°)`;
+                } catch (error) {
+                    console.error('Error getting direction text:', error);
+                    return 'Bilinmiyor';
+                }
             }
 
             formatTime(timestamp) {
-                if (!timestamp) return 'Bilinmiyor';
-                const date = new Date(timestamp);
-                const now = new Date();
-                const diff = (now - date) / 1000;
+                try {
+                    if (!timestamp) return 'Bilinmiyor';
+                    const date = new Date(timestamp);
+                    const now = new Date();
+                    const diff = (now - date) / 1000;
 
-                if (diff < 60) return 'Az önce';
-                if (diff < 3600) return `${Math.floor(diff / 60)} dk önce`;
-                if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
+                    if (diff < 60) return 'Az önce';
+                    if (diff < 3600) return `${Math.floor(diff / 60)} dk önce`;
+                    if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
 
-                return date.toLocaleTimeString('tr-TR');
+                    return date.toLocaleTimeString('tr-TR');
+                } catch (error) {
+                    console.error('Error formatting time:', error);
+                    return 'Bilinmiyor';
+                }
             }
 
             calculateRecentDistance(driver) {
-                if (!driver.polyline || !driver.polyline.locations) return 0;
+                try {
+                    if (!driver.polyline || !driver.polyline.locations) return 0;
 
-                const now = new Date();
-                const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+                    const now = new Date();
+                    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
 
-                const recentLocations = driver.polyline.locations.filter(location =>
-                    new Date(location.timestamp) > fifteenMinutesAgo
-                );
+                    const recentLocations = driver.polyline.locations.filter(location =>
+                        new Date(location.timestamp) > fifteenMinutesAgo
+                    );
 
-                if (recentLocations.length < 2) return 0;
+                    if (recentLocations.length < 2) return 0;
 
-                let totalDistance = 0;
-                for (let i = 1; i < recentLocations.length; i++) {
-                    const prev = recentLocations[i - 1].coordinates;
-                    const curr = recentLocations[i].coordinates;
-                    totalDistance += this.calculateDistance(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+                    let totalDistance = 0;
+                    for (let i = 1; i < recentLocations.length; i++) {
+                        const prev = recentLocations[i - 1].coordinates;
+                        const curr = recentLocations[i].coordinates;
+                        totalDistance += this.calculateDistance(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+                    }
+
+                    return totalDistance;
+                } catch (error) {
+                    console.error('Error calculating recent distance:', error);
+                    return 0;
                 }
-
-                return totalDistance;
             }
 
             calculateDistance(lat1, lng1, lat2, lng2) {
-                const R = 6371;
-                const dLat = (lat2 - lat1) * Math.PI / 180;
-                const dLng = (lng2 - lng1) * Math.PI / 180;
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return R * c;
+                try {
+                    const R = 6371;
+                    const dLat = (lat2 - lat1) * Math.PI / 180;
+                    const dLng = (lng2 - lng1) * Math.PI / 180;
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return R * c;
+                } catch (error) {
+                    console.error('Error calculating distance:', error);
+                    return 0;
+                }
             }
 
             hideLoading() {
-                document.getElementById('loading').style.display = 'none';
+                try {
+                    document.getElementById('loading').style.display = 'none';
+                } catch (error) {
+                    console.error('Error hiding loading:', error);
+                }
             }
         }
 
