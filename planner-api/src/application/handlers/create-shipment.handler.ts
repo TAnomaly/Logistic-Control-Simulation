@@ -1,13 +1,16 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { CreateShipmentCommand } from '../commands/create-shipment.command';
 import { TypeOrmShipmentRepository } from '../../infrastructure/repositories/typeorm-shipment.repository';
+import { TypeOrmOutboxEventRepository } from '../../infrastructure/repositories/typeorm-outbox-event.repository';
 import { Shipment, ShipmentStatus } from '../../domain/entities/shipment.entity';
 import { ShipmentCreatedEvent } from '../../domain/events/shipment-created.event';
+import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
 
 @CommandHandler(CreateShipmentCommand)
 export class CreateShipmentHandler implements ICommandHandler<CreateShipmentCommand> {
     constructor(
         private readonly shipmentRepository: TypeOrmShipmentRepository,
+        private readonly outboxEventRepository: TypeOrmOutboxEventRepository,
         private readonly eventBus: EventBus
     ) { }
 
@@ -24,14 +27,33 @@ export class CreateShipmentHandler implements ICommandHandler<CreateShipmentComm
 
         const savedShipment = await this.shipmentRepository.save(shipment);
 
-        // Publish event
-        this.eventBus.publish(new ShipmentCreatedEvent(
+        // Create domain event
+        const event = new ShipmentCreatedEvent(
             savedShipment.id,
             savedShipment.trackingNumber,
             savedShipment.origin,
             savedShipment.destination,
             savedShipment.createdAt
-        ));
+        );
+
+        // Save to outbox for reliable message delivery
+        const outboxEvent = new OutboxEvent();
+        outboxEvent.eventType = 'ShipmentCreated';
+        outboxEvent.eventData = {
+            shipmentId: event.shipmentId,
+            trackingNumber: event.trackingNumber,
+            origin: event.origin,
+            destination: event.destination,
+            createdAt: event.createdAt
+        };
+        outboxEvent.status = OutboxEventStatus.PENDING;
+        outboxEvent.routingKey = 'shipment.created';
+        outboxEvent.exchange = 'logistics';
+
+        await this.outboxEventRepository.save(outboxEvent);
+
+        // Also publish locally for immediate processing
+        this.eventBus.publish(event);
 
         return savedShipment;
     }

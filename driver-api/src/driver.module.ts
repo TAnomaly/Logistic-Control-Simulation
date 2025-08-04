@@ -10,6 +10,7 @@ import { DriverLocation } from './domain/entities/driver-location.entity';
 import { DriverAssignment } from './domain/entities/driver-assignment.entity';
 import { Shipment } from './domain/entities/shipment.entity';
 import { DriverRoute } from './domain/entities/driver-route.entity';
+import { OutboxEvent } from './domain/entities/outbox-event.entity';
 
 // Infrastructure Repositories
 import { TypeOrmDriverRepository } from './infrastructure/repositories/typeorm-driver.repository';
@@ -17,6 +18,8 @@ import { TypeOrmDriverLocationRepository } from './infrastructure/repositories/t
 import { TypeOrmDriverAssignmentRepository } from './infrastructure/repositories/typeorm-driver-assignment.repository';
 import { TypeOrmShipmentRepository } from './infrastructure/repositories/typeorm-shipment.repository';
 import { TypeOrmDriverRouteRepository } from './infrastructure/repositories/typeorm-driver-route.repository';
+import { TypeOrmOutboxEventRepository } from './infrastructure/repositories/typeorm-outbox-event.repository';
+import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor.service';
 
 // Application Handlers
 import { CreateDriverHandler } from './application/handlers/create-driver.handler';
@@ -50,11 +53,11 @@ import { AuthModule } from './auth/auth.module';
             username: process.env.DB_USERNAME || 'postgres',
             password: process.env.DB_PASSWORD || 'postgres',
             database: process.env.DB_NAME || 'driver_db',
-            entities: [Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute],
+            entities: [Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent],
             synchronize: true, // Development only
             logging: true,
         }),
-        TypeOrmModule.forFeature([Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute]),
+        TypeOrmModule.forFeature([Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent]),
         CqrsModule,
         AuthModule,
         JwtModule.register({
@@ -70,6 +73,8 @@ import { AuthModule } from './auth/auth.module';
         TypeOrmDriverAssignmentRepository,
         TypeOrmShipmentRepository,
         TypeOrmDriverRouteRepository,
+        TypeOrmOutboxEventRepository,
+        OutboxProcessorService,
         // Command Handlers
         CreateDriverHandler,
         UpdateDriverLocationHandler,

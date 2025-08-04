@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Driver Tracking Dashboard</title>
+    <title>🚛 Tır Tracking Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -17,7 +17,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             min-height: 100vh;
         }
 
@@ -27,7 +27,7 @@
         }
 
         .sidebar {
-            width: 350px;
+            width: 380px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-right: 1px solid rgba(255, 255, 255, 0.2);
@@ -49,9 +49,12 @@
         }
 
         .header h1 {
-            color: #333;
-            font-size: 24px;
+            color: #2c3e50;
+            font-size: 28px;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .status-indicator {
@@ -63,15 +66,15 @@
         }
 
         .status-online {
-            background-color: #4CAF50;
+            background-color: #27ae60;
         }
 
         .status-offline {
-            background-color: #f44336;
+            background-color: #e74c3c;
         }
 
         .status-busy {
-            background-color: #ff9800;
+            background-color: #f39c12;
         }
 
         .map-container {
@@ -92,142 +95,265 @@
         .driver-card {
             background: white;
             border-radius: 12px;
-            padding: 15px;
+            padding: 18px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #e67e22;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .driver-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         }
 
-        .driver-card.selected {
-            border-left-color: #4CAF50;
-            background: #f8f9fa;
+        .driver-card.active {
+            border-left-color: #27ae60;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         }
 
-        .driver-header {
+        .driver-info {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            gap: 12px;
+        }
+
+        .driver-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .driver-details {
+            flex: 1;
         }
 
         .driver-name {
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: #2c3e50;
             font-size: 16px;
+            margin-bottom: 4px;
         }
 
-        .driver-license {
-            color: #666;
-            font-size: 12px;
+        .driver-status {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 4px;
         }
 
-        .driver-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .driver-location {
+            font-size: 13px;
+            color: #95a5a6;
+        }
+
+        .shipment-info {
             margin-top: 10px;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 8px;
+            padding: 8px 12px;
             background: #f8f9fa;
             border-radius: 6px;
+            font-size: 12px;
+            color: #6c757d;
         }
 
-        .stat-label {
-            font-size: 11px;
-            color: #666;
-            text-transform: uppercase;
+        .shipment-count {
+            font-weight: 600;
+            color: #e67e22;
         }
 
-        .stat-value {
-            font-size: 14px;
-            font-weight: bold;
-            color: #333;
+        .real-time-info {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: none;
         }
 
-        .connection-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
-            border-radius: 25px;
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-        }
-
-        .connected {
-            background: #4CAF50;
-        }
-
-        .disconnected {
-            background: #f44336;
-        }
-
-        .loading {
+        .real-time-info h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 200px;
-            color: #666;
+            gap: 8px;
         }
 
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+        .real-time-info p {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #34495e;
+        }
+
+        .real-time-info strong {
+            color: #2c3e50;
+        }
+
+        .driver-status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
+            margin-right: 6px;
         }
 
-        @keyframes spin {
+        .status-active {
+            background-color: #27ae60;
+            animation: pulse 1s infinite;
+        }
+
+        .status-idle {
+            background-color: #f39c12;
+        }
+
+        .status-offline {
+            background-color: #e74c3c;
+        }
+
+        .mini-route {
+            stroke-dasharray: 5, 5;
+        }
+
+        /* Truck Icon Styles */
+        .truck-marker {
+            width: 48px !important;
+            height: 48px !important;
+            background: linear-gradient(135deg, #e67e22, #d35400) !important;
+            border: 3px solid white !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 24px !important;
+            color: white !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            z-index: 1000 !important;
+        }
+
+        .truck-marker:hover {
+            transform: scale(1.15);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .truck-marker.delivering {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            animation: pulse 1s infinite;
+        }
+
+        .truck-marker.loading {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            animation: bounce 1s infinite;
+        }
+
+        .truck-marker.stopped {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            animation: none;
+        }
+
+        .truck-marker.idle {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        /* Truck Popup Styles */
+        .truck-popup {
+            min-width: 280px;
+            padding: 0;
+        }
+
+        .truck-popup-header {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+
+        .truck-popup-content {
+            padding: 15px;
+            background: white;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .truck-popup-content p {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #34495e;
+        }
+
+        .truck-popup-content strong {
+            color: #2c3e50;
+        }
+
+        .truck-popup-button {
+            margin-top: 12px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .truck-popup-button:hover {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            transform: translateY(-1px);
+        }
+
+        @keyframes pulse {
             0% {
-                transform: rotate(0deg);
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
             }
 
             100% {
-                transform: rotate(360deg);
+                opacity: 1;
             }
         }
 
-        .no-drivers {
-            text-align: center;
-            padding: 40px;
-            color: #666;
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-4px);
+            }
+
+            60% {
+                transform: translateY(-2px);
+            }
         }
 
-        .polyline-info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
+        .leaflet-popup-content-wrapper {
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 300px;
-            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         }
 
-        .polyline-info h3 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .polyline-info p {
-            margin: 5px 0;
-            color: #666;
-            font-size: 14px;
+        .leaflet-popup-tip {
+            background: white;
         }
     </style>
 </head>
@@ -235,261 +361,457 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <h2 style="margin-bottom: 20px; color: #333;">🚗 Aktif Sürücüler</h2>
+            <div class="header">
+                <h1>🚛 Tır Tracking Dashboard</h1>
+                <p>Gerçek zamanlı tır takip sistemi</p>
+            </div>
+
             <div id="drivers-list">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    Sürücüler yükleniyor...
+                <!-- Driver cards will be populated here -->
+            </div>
+
+            <div id="real-time-info" class="real-time-info">
+                <h3>🚛 <span id="selected-driver-name">Sürücü Seçin</span></h3>
+                <p><strong>Durum:</strong> <span id="driver-status">-</span></p>
+                <p><strong>Konum:</strong> <span id="current-location">-</span></p>
+                <p><strong>Hız:</strong> <span id="current-speed">-</span> km/h</p>
+                <p><strong>Yön:</strong> <span id="current-heading">-</span></p>
+                <p><strong>Son Güncelleme:</strong> <span id="last-update">-</span></p>
+                <p><strong>Kargo Sayısı:</strong> <span id="shipment-count">0</span></p>
+                <div id="mini-route-info"
+                    style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                    <small><strong>Son 15 dakika:</strong> <span id="recent-distance">0</span> km</small>
                 </div>
             </div>
         </div>
+
         <div class="main-content">
-            <div class="header">
-                <h1>📍 Gerçek Zamanlı Sürücü Takibi</h1>
-                <p>Toplam aktif sürücü: <span id="total-drivers">0</span></p>
-            </div>
             <div class="map-container">
                 <div id="map"></div>
-                <div id="polyline-info" class="polyline-info" style="display: none;">
-                    <h3>📍 Rota Bilgileri</h3>
-                    <p><strong>Sürücü:</strong> <span id="selected-driver-name">-</span></p>
-                    <p><strong>Toplam Mesafe:</strong> <span id="total-distance">0</span> km</p>
-                    <p><strong>Ortalama Hız:</strong> <span id="average-speed">0</span> km/h</p>
-                    <p><strong>Konum Sayısı:</strong> <span id="location-count">0</span></p>
-                </div>
             </div>
         </div>
     </div>
-    <div id="connection-status" class="connection-status disconnected">
-        Bağlantı Yok
-    </div>
+
     <script>
-        class DriverTrackingDashboard {
+        class TruckTrackingDashboard {
             constructor() {
-                this.socket = null;
                 this.map = null;
+                this.socket = null;
                 this.drivers = new Map();
                 this.markers = new Map();
                 this.polylines = new Map();
                 this.selectedDriver = null;
                 this.init();
             }
+
             init() {
-                this.initSocket();
                 this.initMap();
-                this.loadInitialData();
+                this.initSocket();
+                this.startPolling();
             }
-            initSocket() {
-                this.socket = io('http://localhost:8002');
-                this.socket.on('connect', () => {
-                    this.updateConnectionStatus(true);
-                    this.socket.emit('subscribe_to_drivers');
-                });
-                this.socket.on('disconnect', () => {
-                    this.updateConnectionStatus(false);
-                });
-                this.socket.on('drivers_update', (data) => {
-                    this.updateDrivers(data.drivers);
-                });
-                this.socket.on('driver_update', (data) => {
-                    this.updateDriver(data.driver);
-                });
-                this.socket.on('location_update', (data) => {
-                    this.updateDriverLocation(data.driverId, data.location);
-                });
-            }
+
             initMap() {
-                // Istanbul center coordinates
-                this.map = L.map('map').setView([41.0082, 28.9784], 10);
+                // Türkiye merkezi
+                this.map = L.map('map').setView([39.9334, 32.8597], 6);
+
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '© OpenStreetMap'
+                    attribution: '© OpenStreetMap contributors'
                 }).addTo(this.map);
             }
-            async loadInitialData() {
+
+            initSocket() {
+                this.socket = io('http://localhost:8002');
+
+                this.socket.on('connect', () => {
+                    console.log('Connected to tracking service');
+                });
+
+                this.socket.on('driverLocationUpdate', (data) => {
+                    this.updateDriver(data);
+                });
+
+                this.socket.on('disconnect', () => {
+                    console.log('Disconnected from tracking service');
+                });
+            }
+
+            startPolling() {
+                // Poll for driver updates every 3 seconds
+                setInterval(() => {
+                    this.fetchDrivers();
+                }, 3000);
+
+                // Initial fetch
+                this.fetchDrivers();
+            }
+
+            async fetchDrivers() {
                 try {
                     const response = await fetch('http://localhost:8002/api/drivers');
                     const data = await response.json();
-                    this.updateDrivers(data.drivers);
+
+                    if (data.drivers) {
+                        data.drivers.forEach(driver => {
+                            this.updateDriver(driver);
+                        });
+                    }
                 } catch (error) {
-                    console.error('Failed to load initial data:', error);
+                    console.error('Error fetching drivers:', error);
                 }
             }
-            updateConnectionStatus(connected) {
-                const statusElement = document.getElementById('connection-status');
-                if (connected) {
-                    statusElement.textContent = '🟢 Bağlı';
-                    statusElement.className = 'connection-status connected';
+
+            updateDriver(driverData) {
+                const driverId = driverData.driverId || driverData.id;
+
+                if (!driverId) return;
+
+                // Update driver data
+                this.drivers.set(driverId, driverData);
+
+                // Update UI
+                this.updateDriverInList(driverData);
+                this.updateDriverOnMap(driverData);
+            }
+
+            updateDriverInList(driver) {
+                const driversList = document.getElementById('drivers-list');
+                const existingCard = document.getElementById(`driver-${driver.driverId}`);
+
+                if (existingCard) {
+                    // Update existing card
+                    const status = this.getDriverStatus(driver);
+                    const location = this.getLocationName(driver.currentLocation);
+
+                    existingCard.querySelector('.driver-status').textContent = status.text;
+                    existingCard.querySelector('.driver-location').textContent = location;
+
+                    if (driver.shipmentCount) {
+                        existingCard.querySelector('.shipment-count').textContent = driver.shipmentCount;
+                    }
                 } else {
-                    statusElement.textContent = '🔴 Bağlantı Yok';
-                    statusElement.className = 'connection-status disconnected';
+                    // Create new card
+                    this.renderDriversList();
                 }
             }
-            updateDrivers(drivers) {
-                this.drivers.clear();
-                drivers.forEach(driver => {
-                    this.drivers.set(driver.driverId, driver);
-                });
-                this.renderDriversList();
-                this.updateMap();
-                this.updateTotalDrivers();
-            }
-            updateDriver(driver) {
-                this.drivers.set(driver.driverId, driver);
-                this.updateDriverInList(driver);
-                this.updateDriverOnMap(driver);
-            }
-            updateDriverLocation(driverId, location) {
-                const driver = this.drivers.get(driverId);
-                if (driver) {
-                    driver.currentLocation = location;
-                    this.updateDriverOnMap(driver);
-                    this.updatePolyline(driver);
-                }
-            }
+
             renderDriversList() {
                 const driversList = document.getElementById('drivers-list');
-                if (this.drivers.size === 0) {
-                    driversList.innerHTML = '<div class="no-drivers">Aktif sürücü bulunamadı</div>';
+                let html = '';
+
+                this.drivers.forEach((driver, driverId) => {
+                    const isActive = this.selectedDriver === driverId;
+                    const status = this.getDriverStatus(driver);
+                    const location = this.getLocationName(driver.currentLocation);
+
+                    html += `
+                        <div class="driver-card ${isActive ? 'active' : ''}" onclick="dashboard.selectDriver('${driverId}')">
+                            <div class="driver-info">
+                                <div class="driver-avatar">🚛</div>
+                                <div class="driver-details">
+                                    <div class="driver-name">${driver.name || 'Bilinmeyen Sürücü'}</div>
+                                    <div class="driver-status">
+                                        <span class="driver-status-indicator status-${status.type}"></span>
+                                        ${status.text}
+                                    </div>
+                                    <div class="driver-location">📍 ${location}</div>
+                                </div>
+                            </div>
+                            ${driver.shipmentCount ? `
+                                <div class="shipment-info">
+                                    📦 <span class="shipment-count">${driver.shipmentCount}</span> kargo
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                driversList.innerHTML = html;
+            }
+
+            updateDriverOnMap(driver) {
+                const driverId = driver.driverId;
+                const location = driver.currentLocation;
+
+                if (!location || !location.coordinates) {
                     return;
                 }
-                driversList.innerHTML = Array.from(this.drivers.values())
-                    .map(driver => this.createDriverCard(driver))
-                    .join('');
+
+                const lat = parseFloat(location.coordinates.latitude);
+                const lng = parseFloat(location.coordinates.longitude);
+
+                let marker = this.markers.get(driverId);
+
+                if (!marker) {
+                    // Create new truck marker
+                    const status = this.getDriverStatus(driver);
+                    const truckIcon = this.getTruckIcon(status);
+
+                    const icon = L.divIcon({
+                        className: 'truck-marker-container',
+                        html: truckIcon,
+                        iconSize: [48, 48],
+                        iconAnchor: [24, 24]
+                    });
+
+                    marker = L.marker([lat, lng], { icon }).addTo(this.map);
+                    this.markers.set(driverId, marker);
+
+                    // Add popup
+                    const popupContent = this.createTruckPopup(driver);
+                    marker.bindPopup(popupContent, {
+                        maxWidth: 300,
+                        className: 'truck-popup'
+                    });
+
+                    // Add click event
+                    marker.on('click', () => {
+                        this.selectDriver(driverId);
+                    });
+                } else {
+                    marker.setLatLng([lat, lng]);
+
+                    // Update truck icon based on status
+                    const status = this.getDriverStatus(driver);
+                    const truckIcon = this.getTruckIcon(status);
+
+                    const icon = L.divIcon({
+                        className: 'truck-marker-container',
+                        html: truckIcon,
+                        iconSize: [48, 48],
+                        iconAnchor: [24, 24]
+                    });
+
+                    marker.setIcon(icon);
+                }
+
+                // Update popup content
+                const popupContent = this.createTruckPopup(driver);
+                marker.getPopup().setContent(popupContent);
             }
-            createDriverCard(driver) {
-                const currentLocation = driver.currentLocation;
-                const polyline = driver.polyline;
+
+            getTruckIcon(status) {
+                let statusClass = 'idle';
+
+                if (status.type === 'active') {
+                    statusClass = 'delivering';
+                } else if (status.type === 'idle') {
+                    statusClass = 'loading';
+                } else if (status.type === 'offline') {
+                    statusClass = 'stopped';
+                }
+
+                // Debug: Add console log to see what's being generated
+                console.log('Creating truck icon with status:', status, 'class:', statusClass);
+
+                // Create a simple but visible truck icon
+                const backgroundColor = statusClass === 'delivering' ? '#27ae60' :
+                    statusClass === 'loading' ? '#3498db' :
+                        statusClass === 'stopped' ? '#e74c3c' :
+                            '#e67e22';
+
+                return `<div style="
+                    width: 48px; 
+                    height: 48px; 
+                    background: ${backgroundColor}; 
+                    border: 3px solid white; 
+                    border-radius: 8px; 
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    font-size: 24px; 
+                    color: white; 
+                    font-weight: bold;
+                    z-index: 1000;
+                ">🚛</div>`;
+            }
+
+            createTruckPopup(driver) {
+                const location = driver.currentLocation;
+                const speed = location?.speed || 0;
+                const heading = location?.heading || 0;
+                const accuracy = location?.accuracy || 0;
+                const status = this.getDriverStatus(driver);
+
                 return `
-                    <div class="driver-card" data-driver-id="${driver.driverId}" onclick="dashboard.selectDriver('${driver.driverId}')">
-                        <div class="driver-header">
-                            <div>
-                                <div class="driver-name">${driver.name}</div>
-                                <div class="driver-license">${driver.licenseNumber}</div>
-                            </div>
-                            <div>
-                                <span class="status-indicator status-${driver.status}"></span>
-                                <span style="font-size: 12px; color: #666;">${driver.status}</span>
-                            </div>
+                    <div class="truck-popup">
+                        <div class="truck-popup-header">
+                            <h3 style="margin: 0; font-size: 16px;">🚛 ${driver.name || 'Bilinmeyen Sürücü'}</h3>
                         </div>
-                        <div class="driver-stats">
-                            <div class="stat-item">
-                                <div class="stat-label">Mesafe</div>
-                                <div class="stat-value">${polyline.totalDistance ? polyline.totalDistance.toFixed(1) : '0'} km</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Hız</div>
-                                <div class="stat-value">${polyline.averageSpeed ? polyline.averageSpeed.toFixed(1) : '0'} km/h</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Konum</div>
-                                <div class="stat-value">${polyline.locationCount || 0}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Süre</div>
-                                <div class="stat-value">${polyline.duration ? Math.round(polyline.duration / 60000) : 0} dk</div>
-                            </div>
+                        <div class="truck-popup-content">
+                            <p><strong>📍 Konum:</strong> ${this.getLocationName(location)}</p>
+                            <p><strong>🚗 Hız:</strong> ${speed} km/h</p>
+                            <p><strong>🧭 Yön:</strong> ${this.getDirectionText(heading)}</p>
+                            <p><strong>📊 Durum:</strong> <span style="color: ${status.type === 'active' ? '#27ae60' : status.type === 'idle' ? '#f39c12' : '#e74c3c'}">${status.text}</span></p>
+                            <p><strong>⏰ Son Güncelleme:</strong> ${this.formatTime(driver.lastUpdate)}</p>
+                            ${driver.shipmentCount ? `<p><strong>📦 Kargo Sayısı:</strong> ${driver.shipmentCount}</p>` : ''}
+                            <button onclick="dashboard.selectDriver('${driver.driverId}')" class="truck-popup-button">
+                                📋 Detayları Göster
+                            </button>
                         </div>
                     </div>
                 `;
             }
-            updateDriverInList(driver) {
-                const driverCard = document.querySelector(`[data-driver-id="${driver.driverId}"]`);
-                if (driverCard) {
-                    driverCard.outerHTML = this.createDriverCard(driver);
-                }
-            }
-            updateMap() {
-                // Clear existing markers and polylines
-                this.markers.forEach(marker => this.map.removeLayer(marker));
-                this.polylines.forEach(polyline => this.map.removeLayer(polyline));
-                this.markers.clear();
-                this.polylines.clear();
-                // Add new markers and polylines
-                this.drivers.forEach(driver => {
-                    this.addDriverToMap(driver);
-                });
-            }
-            addDriverToMap(driver) {
-                const currentLocation = driver.currentLocation;
-                if (!currentLocation || !currentLocation.coordinates) return;
-                const coordinates = currentLocation.coordinates;
-                // Create marker
-                const marker = L.marker([coordinates.latitude, coordinates.longitude], {
-                    title: driver.name,
-                    icon: L.icon({
-                        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                        shadowSize: [41, 41]
-                    })
-                }).addTo(this.map);
-                marker.bindPopup(`<b>${driver.name}</b><br>${driver.licenseNumber}`);
-                this.markers.set(driver.driverId, marker);
-                // Create polyline
-                if (driver.polyline && driver.polyline.locations && driver.polyline.locations.length > 1) {
-                    const path = driver.polyline.locations.map(location => [location.coordinates.latitude, location.coordinates.longitude]);
-                    const polyline = L.polyline(path, { color: '#667eea', weight: 4 }).addTo(this.map);
-                    this.polylines.set(driver.driverId, polyline);
-                }
-            }
-            updateDriverOnMap(driver) {
-                const marker = this.markers.get(driver.driverId);
-                if (marker && driver.currentLocation && driver.currentLocation.coordinates) {
-                    const coordinates = driver.currentLocation.coordinates;
-                    marker.setLatLng([coordinates.latitude, coordinates.longitude]);
-                }
-                this.updatePolyline(driver);
-            }
-            updatePolyline(driver) {
-                const polyline = this.polylines.get(driver.driverId);
-                if (polyline) {
-                    this.map.removeLayer(polyline);
-                }
-                if (driver.polyline && driver.polyline.locations && driver.polyline.locations.length > 1) {
-                    const path = driver.polyline.locations.map(location => [location.coordinates.latitude, location.coordinates.longitude]);
-                    const newPolyline = L.polyline(path, { color: '#667eea', weight: 4 }).addTo(this.map);
-                    this.polylines.set(driver.driverId, newPolyline);
-                }
-            }
+
             selectDriver(driverId) {
-                document.querySelectorAll('.driver-card').forEach(card => {
-                    card.classList.remove('selected');
-                });
-                const selectedCard = document.querySelector(`[data-driver-id="${driverId}"]`);
-                if (selectedCard) {
-                    selectedCard.classList.add('selected');
+                this.selectedDriver = driverId;
+                this.renderDriversList();
+                this.showRealTimeInfo(driverId);
+            }
+
+            showRealTimeInfo(driverId) {
+                const driver = this.drivers.get(driverId);
+                if (!driver) return;
+
+                const realTimeInfo = document.getElementById('real-time-info');
+                const status = this.getDriverStatus(driver);
+
+                // Update info panel
+                document.getElementById('selected-driver-name').textContent = driver.name || 'Bilinmeyen Sürücü';
+                document.getElementById('driver-status').innerHTML = `<span style="color: ${status.type === 'active' ? '#27ae60' : status.type === 'idle' ? '#f39c12' : '#e74c3c'}">${status.text}</span>`;
+                document.getElementById('current-location').textContent = this.getLocationName(driver.currentLocation);
+                document.getElementById('current-speed').textContent = driver.currentLocation?.speed || 0;
+                document.getElementById('current-heading').textContent = this.getDirectionText(driver.currentLocation?.heading);
+                document.getElementById('last-update').textContent = this.formatTime(driver.lastUpdate);
+                document.getElementById('shipment-count').textContent = driver.shipmentCount || 0;
+
+                // Calculate recent distance
+                const recentDistance = this.calculateRecentDistance(driver);
+                document.getElementById('recent-distance').textContent = recentDistance.toFixed(2);
+
+                realTimeInfo.style.display = 'block';
+
+                // Center map on driver
+                if (driver.currentLocation?.coordinates) {
+                    const lat = driver.currentLocation.coordinates.latitude;
+                    const lng = driver.currentLocation.coordinates.longitude;
+                    this.map.setView([lat, lng], 12);
                 }
-                this.selectedDriver = this.drivers.get(driverId);
-                this.showPolylineInfo();
-                this.centerMapOnDriver();
+
+                // Show mini route
+                this.showMiniRoute(driverId);
             }
-            showPolylineInfo() {
-                if (!this.selectedDriver) return;
-                const polyline = this.selectedDriver.polyline;
-                const infoElement = document.getElementById('polyline-info');
-                document.getElementById('selected-driver-name').textContent = this.selectedDriver.name;
-                document.getElementById('total-distance').textContent = polyline.totalDistance ? polyline.totalDistance.toFixed(1) : '0';
-                document.getElementById('average-speed').textContent = polyline.averageSpeed ? polyline.averageSpeed.toFixed(1) : '0';
-                document.getElementById('location-count').textContent = polyline.locationCount || 0;
-                infoElement.style.display = 'block';
+
+            getDriverStatus(driver) {
+                const now = new Date();
+                const lastUpdate = new Date(driver.lastUpdate || driver.lastActiveAt);
+                const timeDiff = (now - lastUpdate) / 1000 / 60; // dakika cinsinden
+
+                if (timeDiff > 5) {
+                    return { type: 'offline', text: 'Çevrimdışı' };
+                }
+
+                const speed = driver.currentLocation?.speed || 0;
+                if (speed > 5) {
+                    return { type: 'active', text: 'Teslimat Yapıyor' };
+                } else {
+                    return { type: 'idle', text: 'Yükleme/Bekleme' };
+                }
             }
-            centerMapOnDriver() {
-                if (!this.selectedDriver || !this.selectedDriver.currentLocation || !this.selectedDriver.currentLocation.coordinates) return;
-                const coordinates = this.selectedDriver.currentLocation.coordinates;
-                this.map.setView([coordinates.latitude, coordinates.longitude], 14);
+
+            getLocationName(location) {
+                if (!location || !location.coordinates) return 'Bilinmiyor';
+
+                const lat = location.coordinates.latitude;
+                const lng = location.coordinates.longitude;
+
+                // Türkiye şehirleri için basit kontrol
+                if (lat >= 41.0 && lat <= 41.1 && lng >= 28.9 && lng <= 29.0) return 'İstanbul';
+                if (lat >= 39.9 && lat <= 40.0 && lng >= 32.8 && lng <= 32.9) return 'Ankara';
+                if (lat >= 38.4 && lat <= 38.5 && lng >= 27.1 && lng <= 27.2) return 'İzmir';
+                if (lat >= 40.1 && lat <= 40.2 && lng >= 29.0 && lng <= 29.1) return 'Bursa';
+                if (lat >= 36.8 && lat <= 36.9 && lng >= 30.7 && lng <= 30.8) return 'Antalya';
+
+                return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             }
-            updateTotalDrivers() {
-                document.getElementById('total-drivers').textContent = this.drivers.size;
+
+            getDirectionText(heading) {
+                if (!heading) return 'Bilinmiyor';
+
+                const directions = ['Kuzey', 'Kuzeydoğu', 'Doğu', 'Güneydoğu', 'Güney', 'Güneybatı', 'Batı', 'Kuzeybatı'];
+                const index = Math.round(heading / 45) % 8;
+                return `${directions[index]} (${heading}°)`;
+            }
+
+            formatTime(timestamp) {
+                if (!timestamp) return 'Bilinmiyor';
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diff = (now - date) / 1000; // saniye cinsinden
+
+                if (diff < 60) return 'Az önce';
+                if (diff < 3600) return `${Math.floor(diff / 60)} dk önce`;
+                if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
+
+                return date.toLocaleTimeString('tr-TR');
+            }
+
+            calculateRecentDistance(driver) {
+                if (!driver.polyline || !driver.polyline.locations) return 0;
+
+                const now = new Date();
+                const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+
+                const recentLocations = driver.polyline.locations.filter(location =>
+                    new Date(location.timestamp) > fifteenMinutesAgo
+                );
+
+                if (recentLocations.length < 2) return 0;
+
+                let totalDistance = 0;
+                for (let i = 1; i < recentLocations.length; i++) {
+                    const prev = recentLocations[i - 1].coordinates;
+                    const curr = recentLocations[i].coordinates;
+                    totalDistance += this.calculateDistance(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+                }
+
+                return totalDistance;
+            }
+
+            calculateDistance(lat1, lng1, lat2, lng2) {
+                const R = 6371; // Earth's radius in km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLng = (lng2 - lng1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            showMiniRoute(driverId) {
+                // Remove existing mini route
+                const existingMiniRoute = this.map.getLayers().find(layer => layer._miniRouteDriverId === driverId);
+                if (existingMiniRoute) {
+                    this.map.removeLayer(existingMiniRoute);
+                }
+
+                const driver = this.drivers.get(driverId);
+                if (!driver.polyline || !driver.polyline.locations) return;
+
+                // Get last 10 locations
+                const recentLocations = driver.polyline.locations.slice(-10);
+                if (recentLocations.length < 2) return;
+
+                const path = recentLocations.map(location => [
+                    location.coordinates.latitude,
+                    location.coordinates.longitude
+                ]);
+
+                const miniRoute = L.polyline(path, {
+                    color: '#e67e22',
+                    weight: 4,
+                    opacity: 0.8,
+                    className: 'mini-route'
+                }).addTo(this.map);
+
+                // Mark this as mini route for this driver
+                miniRoute._miniRouteDriverId = driverId;
             }
         }
-        // Initialize dashboard when page loads
-        let dashboard;
-        window.addEventListener('load', () => {
-            dashboard = new DriverTrackingDashboard();
-        });
+
+        // Initialize dashboard
+        const dashboard = new TruckTrackingDashboard();
     </script>
 </body>
 
