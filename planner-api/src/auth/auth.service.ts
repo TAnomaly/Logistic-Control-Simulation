@@ -1,9 +1,15 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole } from './jwt.strategy';
+import { IsEmail, IsString, IsNotEmpty } from 'class-validator';
 
 export class PlannerLoginDto {
+    @IsEmail()
+    @IsNotEmpty()
     email: string;
+
+    @IsString()
+    @IsNotEmpty()
     password: string;
 }
 

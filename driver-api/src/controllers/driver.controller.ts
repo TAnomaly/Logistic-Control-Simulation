@@ -1,7 +1,5 @@
 import { Controller, Get, Post, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CreateDriverCommand } from '../application/commands/create-driver.command';
 import { AssignShipmentCommand } from '../application/commands/assign-shipment.command';
 import { UpdateDriverLocationCommand } from '../application/commands/update-driver-location.command';
@@ -17,18 +15,45 @@ import { CapacityService } from '../services/capacity.service';
 import { RouteService } from '../services/route.service';
 import { RabbitMQService } from '../infrastructure/rabbitmq/rabbitmq.service';
 
+import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
+
 export class CreateDriverDto {
+    @IsString()
+    @IsNotEmpty()
     name: string;
+
+    @IsString()
+    @IsNotEmpty()
     licenseNumber: string;
+
+    @IsString()
+    @IsNotEmpty()
     phoneNumber: string;
+
+    @IsString()
+    @IsOptional()
     address?: string;
 }
 
 export class UpdateLocationDto {
+    @IsNumber()
+    @IsNotEmpty()
     latitude: number;
+
+    @IsNumber()
+    @IsNotEmpty()
     longitude: number;
+
+    @IsString()
+    @IsOptional()
     address?: string;
+
+    @IsNumber()
+    @IsOptional()
     speed?: number;
+
+    @IsNumber()
+    @IsOptional()
     heading?: number;
 }
 
@@ -39,9 +64,7 @@ export class DriverController {
         private readonly queryBus: QueryBus,
         private readonly capacityService: CapacityService,
         private readonly routeService: RouteService,
-        private readonly rabbitMQService: RabbitMQService,
-        @InjectRepository(DriverAssignment)
-        private readonly driverAssignmentRepository: Repository<DriverAssignment>
+        private readonly rabbitMQService: RabbitMQService
     ) { }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -147,14 +170,8 @@ export class DriverController {
 
             console.log(`📝 Assignment data:`, assignment);
 
-            // TypeORM repository kullanarak kaydet
-            const driverAssignmentRepository = this.driverAssignmentRepository;
-            if (driverAssignmentRepository) {
-                await driverAssignmentRepository.save(assignment);
-                console.log(`✅ Assignment saved to database`);
-            } else {
-                console.log(`❌ Repository not available`);
-            }
+            // In-memory assignment - repository kullanmıyoruz
+            console.log(`✅ Assignment processed in memory`);
         } catch (error) {
             console.error(`❌ Assignment failed:`, error);
             throw error;

@@ -1,4 +1,5 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
 import { GetDriverShipmentsQuery } from '../queries/get-driver-shipments.query';
 import { TypeOrmShipmentRepository } from '../../infrastructure/repositories/typeorm-shipment.repository';
 

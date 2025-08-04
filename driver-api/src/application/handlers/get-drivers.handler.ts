@@ -1,4 +1,5 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
 import { GetDriversQuery } from '../queries/get-drivers.query';
 import { TypeOrmDriverRepository } from '../../infrastructure/repositories/typeorm-driver.repository';
 import { Driver } from '../../domain/entities/driver.entity';

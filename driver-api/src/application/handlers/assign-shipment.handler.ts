@@ -1,4 +1,5 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
 import { AssignShipmentCommand } from '../commands/assign-shipment.command';
 import { TypeOrmDriverAssignmentRepository } from '../../infrastructure/repositories/typeorm-driver-assignment.repository';
 import { DriverAssignment, AssignmentStatus } from '../../domain/entities/driver-assignment.entity';

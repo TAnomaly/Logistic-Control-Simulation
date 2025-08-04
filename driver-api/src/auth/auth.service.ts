@@ -1,14 +1,25 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole } from './jwt.strategy';
+import { IsString, IsNotEmpty, IsEmail } from 'class-validator';
 
 export class DriverLoginDto {
+    @IsString()
+    @IsNotEmpty()
     licenseNumber: string;
+
+    @IsString()
+    @IsNotEmpty()
     phoneNumber: string;
 }
 
 export class AdminLoginDto {
+    @IsEmail()
+    @IsNotEmpty()
     email: string;
+
+    @IsString()
+    @IsNotEmpty()
     password: string;
 }
 

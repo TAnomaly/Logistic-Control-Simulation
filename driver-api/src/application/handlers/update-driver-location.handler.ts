@@ -1,4 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateDriverLocationCommand } from '../commands/update-driver-location.command';
@@ -7,7 +8,7 @@ import { TypeOrmOutboxEventRepository } from '../../infrastructure/repositories/
 import { DriverLocationUpdatedEvent } from '../../domain/events/driver-location-updated.event';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { DriverLocation } from '../../domain/entities/driver-location.entity';
-import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
 
 @CommandHandler(UpdateDriverLocationCommand)
 export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriverLocationCommand> {
@@ -53,7 +54,7 @@ export class UpdateDriverLocationHandler implements ICommandHandler<UpdateDriver
 
             // Create domain event and save to outbox
             const event = new DriverLocationUpdatedEvent(driverId, latitude, longitude, address || '');
-            
+
             const outboxEvent = new OutboxEvent();
             outboxEvent.eventType = 'DriverLocationUpdated';
             outboxEvent.eventData = {

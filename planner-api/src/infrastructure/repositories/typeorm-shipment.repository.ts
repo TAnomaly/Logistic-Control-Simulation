@@ -1,76 +1,72 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ShipmentRepository } from '../../domain/repositories/shipment.repository';
 import { Shipment, ShipmentStatus } from '../../domain/entities/shipment.entity';
 
 @Injectable()
 export class TypeOrmShipmentRepository implements ShipmentRepository {
-    constructor(
-        @InjectRepository(Shipment)
-        private readonly repository: Repository<Shipment>
-    ) { }
+    private shipments: Shipment[] = [];
+
+    constructor() { }
 
     async save(shipment: Shipment): Promise<Shipment> {
-        return await this.repository.save(shipment);
+        if (!shipment.id) {
+            shipment.id = Math.random().toString(36).substr(2, 9);
+            shipment.createdAt = new Date();
+        }
+        shipment.updatedAt = new Date();
+
+        const existingIndex = this.shipments.findIndex(s => s.id === shipment.id);
+        if (existingIndex >= 0) {
+            this.shipments[existingIndex] = shipment;
+        } else {
+            this.shipments.push(shipment);
+        }
+
+        return shipment;
     }
 
     async findById(id: string): Promise<Shipment | null> {
-        return await this.repository.findOne({
-            where: { id },
-            relations: ['trackingEvents']
-        });
+        return this.shipments.find(s => s.id === id) || null;
     }
 
     async findByTrackingNumber(trackingNumber: string): Promise<Shipment | null> {
-        return await this.repository.findOne({
-            where: { trackingNumber },
-            relations: ['trackingEvents']
-        });
+        return this.shipments.find(s => s.trackingNumber === trackingNumber) || null;
     }
 
     async findByStatus(status: ShipmentStatus): Promise<Shipment[]> {
-        return await this.repository.find({
-            where: { status },
-            relations: ['trackingEvents']
-        });
+        return this.shipments.filter(s => s.status === status);
     }
 
     async findByDriverId(driverId: string): Promise<Shipment[]> {
-        return await this.repository.find({
-            where: { assignedDriverId: driverId },
-            relations: ['trackingEvents']
-        });
+        return this.shipments.filter(s => s.assignedDriverId === driverId);
     }
 
     async findAll(): Promise<Shipment[]> {
-        return await this.repository.find({
-            relations: ['trackingEvents']
-        });
+        return [...this.shipments];
     }
 
     async delete(id: string): Promise<void> {
-        await this.repository.delete(id);
+        this.shipments = this.shipments.filter(s => s.id !== id);
     }
 
     async updateStatus(id: string, status: ShipmentStatus): Promise<Shipment> {
-        await this.repository.update(id, { status });
         const shipment = await this.findById(id);
         if (!shipment) {
             throw new Error('Shipment not found');
         }
+        shipment.status = status;
+        shipment.updatedAt = new Date();
         return shipment;
     }
 
     async assignDriver(id: string, driverId: string): Promise<Shipment> {
-        await this.repository.update(id, {
-            assignedDriverId: driverId,
-            status: ShipmentStatus.ASSIGNED
-        });
         const shipment = await this.findById(id);
         if (!shipment) {
             throw new Error('Shipment not found');
         }
+        shipment.assignedDriverId = driverId;
+        shipment.status = ShipmentStatus.ASSIGNED;
+        shipment.updatedAt = new Date();
         return shipment;
     }
 } 

@@ -33,9 +33,13 @@ import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor
 import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
 import { RedisService } from './infrastructure/redis/redis.service';
 
+// Common Services
+import { CustomLogger } from './common/logger/logger.service';
+
 // Controllers
 import { ShipmentController } from './controllers/shipment.controller';
 import { AuthController } from './auth/auth.controller';
+import { HealthController } from './common/health/health.controller';
 import { AuthService } from './auth/auth.service';
 import { JwtStrategy } from './auth/jwt.strategy';
 
@@ -58,18 +62,7 @@ const EventHandlers: any[] = [];
 @Module({
     imports: [
         ConfigModule.forRoot(),
-        TypeOrmModule.forRoot({
-            type: 'postgres',
-            host: process.env.DB_HOST || 'postgres',
-            port: parseInt(process.env.DB_PORT || '5432'),
-            username: process.env.DB_USERNAME || 'postgres',
-            password: process.env.DB_PASSWORD || 'postgres',
-            database: process.env.DB_NAME || 'planner_db',
-            entities: [Shipment, OutboxEvent, TrackingEvent],
-            synchronize: process.env.NODE_ENV !== 'production',
-            logging: process.env.NODE_ENV === 'development',
-        }),
-        TypeOrmModule.forFeature([Shipment, OutboxEvent, TrackingEvent]),
+        // TypeORM configuration removed for now
         CqrsModule.forRoot(),
         JwtModule.register({
             secret: process.env.JWT_SECRET || 'your-secret-key',
@@ -79,45 +72,46 @@ const EventHandlers: any[] = [];
     controllers: [
         ShipmentController,
         AuthController,
+        HealthController,
     ],
     providers: [
+        // Common Services
+        CustomLogger,
+
         // Repositories
-        {
-            provide: 'ShipmentRepository',
-            useClass: TypeOrmShipmentRepository,
-        },
-        {
-            provide: 'OutboxEventRepository',
-            useClass: TypeOrmOutboxEventRepository,
-        },
-        {
-            provide: 'TrackingEventRepository',
-            useClass: TypeOrmTrackingEventRepository,
-        },
-        
+        TypeOrmShipmentRepository,
+        TypeOrmOutboxEventRepository,
+        TypeOrmTrackingEventRepository,
+
         // Services
         OutboxProcessorService,
         RabbitMQService,
         RedisService,
         AuthService,
         JwtStrategy,
-        
+
         // Guards
         JwtAuthGuard,
         RolesGuard,
-        
+
         // Command and Query Handlers
         ...CommandHandlers,
         ...QueryHandlers,
         ...EventHandlers,
     ],
     exports: [
-        'ShipmentRepository',
-        'OutboxEventRepository',
-        'TrackingEventRepository',
+        // Common Services
+        CustomLogger,
+
+        // Repositories
+        TypeOrmShipmentRepository,
+        TypeOrmOutboxEventRepository,
+        TypeOrmTrackingEventRepository,
+
+        // Services
         OutboxProcessorService,
         RabbitMQService,
         RedisService,
     ],
 })
-export class PlannerModule {} 
+export class PlannerModule { } 

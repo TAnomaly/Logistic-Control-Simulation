@@ -10,7 +10,7 @@ import { DriverLocation } from './domain/entities/driver-location.entity';
 import { DriverAssignment } from './domain/entities/driver-assignment.entity';
 import { Shipment } from './domain/entities/shipment.entity';
 import { DriverRoute } from './domain/entities/driver-route.entity';
-import { OutboxEvent } from '../../shared/outbox/outbox-event.entity';
+import { OutboxEvent } from './domain/entities/outbox-event.entity';
 
 // Infrastructure Repositories
 import { TypeOrmDriverRepository } from './infrastructure/repositories/typeorm-driver.repository';
@@ -40,6 +40,9 @@ import { GetDriverShipmentsHandler } from './application/handlers/get-driver-shi
 import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor.service';
 import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
 import { RedisService } from './infrastructure/redis/redis.service';
+
+// Common Services
+import { CustomLogger } from './common/logger/logger.service';
 import { RouteService } from './services/route.service';
 import { CapacityService } from './services/capacity.service';
 
@@ -47,6 +50,7 @@ import { CapacityService } from './services/capacity.service';
 import { DriverController } from './controllers/driver.controller';
 import { RouteController } from './controllers/route.controller';
 import { AuthController } from './auth/auth.controller';
+import { HealthController } from './common/health/health.controller';
 import { AuthService } from './auth/auth.service';
 import { JwtStrategy } from './auth/jwt.strategy';
 
@@ -92,34 +96,20 @@ const EventHandlers: any[] = [];
         DriverController,
         RouteController,
         AuthController,
+        HealthController,
     ],
     providers: [
+        // Common Services
+        CustomLogger,
+
         // Repositories
-        {
-            provide: 'DriverRepository',
-            useClass: TypeOrmDriverRepository,
-        },
-        {
-            provide: 'DriverLocationRepository',
-            useClass: TypeOrmDriverLocationRepository,
-        },
-        {
-            provide: 'DriverAssignmentRepository',
-            useClass: TypeOrmDriverAssignmentRepository,
-        },
-        {
-            provide: 'ShipmentRepository',
-            useClass: TypeOrmShipmentRepository,
-        },
-        {
-            provide: 'DriverRouteRepository',
-            useClass: TypeOrmDriverRouteRepository,
-        },
-        {
-            provide: 'OutboxEventRepository',
-            useClass: TypeOrmOutboxEventRepository,
-        },
-        
+        TypeOrmDriverRepository,
+        TypeOrmDriverLocationRepository,
+        TypeOrmDriverAssignmentRepository,
+        TypeOrmShipmentRepository,
+        TypeOrmDriverRouteRepository,
+        TypeOrmOutboxEventRepository,
+
         // Services
         OutboxProcessorService,
         RabbitMQService,
@@ -128,23 +118,23 @@ const EventHandlers: any[] = [];
         CapacityService,
         AuthService,
         JwtStrategy,
-        
+
         // Guards
         JwtAuthGuard,
         RolesGuard,
-        
+
         // Command and Query Handlers
         ...CommandHandlers,
         ...QueryHandlers,
         ...EventHandlers,
     ],
     exports: [
-        'DriverRepository',
-        'DriverLocationRepository',
-        'DriverAssignmentRepository',
-        'ShipmentRepository',
-        'DriverRouteRepository',
-        'OutboxEventRepository',
+        TypeOrmDriverRepository,
+        TypeOrmDriverLocationRepository,
+        TypeOrmDriverAssignmentRepository,
+        TypeOrmShipmentRepository,
+        TypeOrmDriverRouteRepository,
+        TypeOrmOutboxEventRepository,
         OutboxProcessorService,
         RabbitMQService,
         RedisService,
@@ -152,4 +142,4 @@ const EventHandlers: any[] = [];
         CapacityService,
     ],
 })
-export class DriverModule {} 
+export class DriverModule { } 

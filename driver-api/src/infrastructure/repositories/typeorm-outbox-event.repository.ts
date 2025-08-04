@@ -53,4 +53,22 @@ export class TypeOrmOutboxEventRepository implements OutboxEventRepository {
             order: { createdAt: 'DESC' }
         });
     }
+
+    async findPendingEvents(): Promise<OutboxEvent[]> {
+        return await this.findPending();
+    }
+
+    async updateStatus(id: string, status: OutboxEventStatus, errorMessage?: string): Promise<void> {
+        await this.repository.update(id, {
+            status,
+            errorMessage,
+            processedAt: status === OutboxEventStatus.PROCESSED ? new Date() : undefined,
+        });
+    }
+
+    async deleteProcessedEvents(): Promise<void> {
+        await this.repository.delete({
+            status: OutboxEventStatus.PROCESSED
+        });
+    }
 } 

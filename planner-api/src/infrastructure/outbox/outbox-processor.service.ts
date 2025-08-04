@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
+import { TypeOrmOutboxEventRepository } from '../repositories/typeorm-outbox-event.repository';
 import * as amqp from 'amqplib';
 
 @Injectable()
@@ -11,8 +10,7 @@ export class OutboxProcessorService implements OnModuleInit {
     private channel: any;
 
     constructor(
-        @InjectRepository(OutboxEvent)
-        private readonly outboxEventRepository: Repository<OutboxEvent>,
+        private readonly outboxEventRepository: TypeOrmOutboxEventRepository,
     ) { }
 
     async onModuleInit() {
@@ -25,10 +23,10 @@ export class OutboxProcessorService implements OnModuleInit {
             const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@rabbitmq:5672';
             this.connection = await amqp.connect(RABBITMQ_URL);
             this.channel = await this.connection.createChannel();
-            
+
             // Declare exchange
             await this.channel.assertExchange('logistics', 'topic', { durable: true });
-            
+
             this.logger.log('✅ Connected to RabbitMQ for outbox processing');
         } catch (error) {
             this.logger.error('❌ Failed to connect to RabbitMQ:', error);
@@ -43,9 +41,7 @@ export class OutboxProcessorService implements OnModuleInit {
 
     private async processPendingEvents() {
         try {
-            const pendingEvents = await this.outboxEventRepository.find({
-                where: { status: OutboxEventStatus.PENDING }
-            });
+            const pendingEvents = await this.outboxEventRepository.findPending();
 
             for (const event of pendingEvents) {
                 await this.processEvent(event);
@@ -58,8 +54,7 @@ export class OutboxProcessorService implements OnModuleInit {
     private async processEvent(event: OutboxEvent) {
         try {
             // Mark as processing
-            event.status = OutboxEventStatus.PROCESSING;
-            await this.outboxEventRepository.save(event);
+            await this.outboxEventRepository.markAsProcessing(event.id);
 
             // Publish to RabbitMQ
             await this.channel.publish(
@@ -70,16 +65,12 @@ export class OutboxProcessorService implements OnModuleInit {
             );
 
             // Mark as completed
-            event.status = OutboxEventStatus.COMPLETED;
-            event.processedAt = new Date();
-            await this.outboxEventRepository.save(event);
+            await this.outboxEventRepository.markAsCompleted(event.id);
 
             this.logger.log(`✅ Published event ${event.eventType} to RabbitMQ`);
         } catch (error) {
             // Mark as failed
-            event.status = OutboxEventStatus.FAILED;
-            event.errorMessage = error.message;
-            await this.outboxEventRepository.save(event);
+            await this.outboxEventRepository.markAsFailed(event.id, error.message);
 
             this.logger.error(`❌ Failed to publish event ${event.eventType}:`, error);
         }

@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
 import * as amqp from 'amqplib';
 
 @Injectable()
@@ -25,10 +25,10 @@ export class OutboxProcessorService implements OnModuleInit {
             const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@rabbitmq:5672';
             this.connection = await amqp.connect(RABBITMQ_URL);
             this.channel = await this.connection.createChannel();
-            
+
             // Declare exchange
             await this.channel.assertExchange('logistics', 'topic', { durable: true });
-            
+
             this.logger.log('✅ Connected to RabbitMQ for outbox processing');
         } catch (error) {
             this.logger.error('❌ Failed to connect to RabbitMQ:', error);

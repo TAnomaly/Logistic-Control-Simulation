@@ -1,10 +1,11 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
 import { CreateDriverCommand } from '../commands/create-driver.command';
 import { TypeOrmDriverRepository } from '../../infrastructure/repositories/typeorm-driver.repository';
 import { TypeOrmOutboxEventRepository } from '../../infrastructure/repositories/typeorm-outbox-event.repository';
 import { Driver, DriverStatus } from '../../domain/entities/driver.entity';
 import { DriverCreatedEvent } from '../../domain/events/driver-created.event';
-import { OutboxEvent, OutboxEventStatus } from '../../../../shared/outbox/outbox-event.entity';
+import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
 
 @CommandHandler(CreateDriverCommand)
 export class CreateDriverHandler implements ICommandHandler<CreateDriverCommand> {

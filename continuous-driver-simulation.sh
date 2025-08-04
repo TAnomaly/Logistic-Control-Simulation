@@ -186,13 +186,11 @@ update_driver_location() {
     
     local response=$(curl -s -X PUT "$DRIVER_API_URL/api/drivers/$driver_id/location" \
         -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $ADMIN_TOKEN" \
         -d "{
             \"latitude\": $lat,
             \"longitude\": $lng,
             \"speed\": $speed,
-            \"heading\": $heading,
-            \"accuracy\": $((3 + RANDOM % 8))
+            \"heading\": $heading
         }")
     
     if [ $? -eq 0 ]; then
