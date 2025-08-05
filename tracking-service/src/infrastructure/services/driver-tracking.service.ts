@@ -205,4 +205,49 @@ export class DriverTrackingService implements DriverTrackingRepository {
             licenseNumber: `LIC-${driverId}`
         };
     }
+
+
+
+    /**
+     * Get polyline statistics for a driver
+     */
+    async getPolylineStats(driverId: string): Promise<{
+        totalPoints: number;
+        totalDistance: number;
+        duration: number;
+        averageSpeed: number;
+        startTime: Date;
+        lastUpdateTime: Date;
+    } | null> {
+        const polyline = await this.getDriverPolyline(driverId);
+        if (!polyline) return null;
+
+        return {
+            totalPoints: polyline.locations.length,
+            totalDistance: polyline.totalDistance,
+            duration: polyline.getDuration(),
+            averageSpeed: polyline.getAverageSpeed(),
+            startTime: polyline.startTime,
+            lastUpdateTime: polyline.lastUpdateTime
+        };
+    }
+
+    /**
+     * Clear all polylines (for testing purposes)
+     */
+    async clearAllPolylines(): Promise<void> {
+        try {
+            const keys = await this.redis.keys('driver:*:polyline');
+            if (keys.length > 0) {
+                await this.redis.del(keys);
+                this.logger.log(`🗑️ Cleared ${keys.length} polylines`);
+            }
+
+            // Also clear active drivers
+            await this.redis.del('active_drivers');
+            this.logger.log(`🗑️ Cleared active drivers list`);
+        } catch (error) {
+            this.logger.error(`Failed to clear polylines: ${error.message}`);
+        }
+    }
 } 

@@ -88,6 +88,28 @@ export class DriverPolyline {
         if (duration === 0) return 0;
         return (this.totalDistance / duration) * 3600000; // km/h
     }
+
+    /**
+     * Basit H3 grid analizi
+     */
+    getH3Grid(): string[] {
+        return this.locations.map(location =>
+            `${Math.round(location.coordinates.latitude * 1000)},${Math.round(location.coordinates.longitude * 1000)}`
+        );
+    }
+
+    /**
+     * Rota verimliliği (basit hesaplama)
+     */
+    getRouteEfficiency(): number {
+        if (this.locations.length < 2) return 0;
+
+        const start = this.locations[0];
+        const end = this.locations[this.locations.length - 1];
+        const straightDistance = this.calculateDistance(start.coordinates, end.coordinates);
+
+        return straightDistance / this.totalDistance;
+    }
 }
 
 export class ActiveDriver {

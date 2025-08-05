@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpException, HttpStatus, Delete } from '@nestjs/common';
 import { DriverTrackingService } from '../infrastructure/services/driver-tracking.service';
 
 @Controller()
@@ -69,7 +69,9 @@ export class TrackingController {
                 startTime: polyline.startTime,
                 lastUpdateTime: polyline.lastUpdateTime,
                 locationCount: polyline.locations.length,
-                averageSpeed: polyline.getAverageSpeed()
+                averageSpeed: polyline.getAverageSpeed(),
+                routeEfficiency: polyline.getRouteEfficiency(),
+                h3Grid: polyline.getH3Grid()
             };
         } catch (error) {
             if (error instanceof HttpException) throw error;
