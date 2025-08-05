@@ -62,7 +62,18 @@ const EventHandlers: any[] = [];
 @Module({
     imports: [
         ConfigModule.forRoot(),
-        // TypeORM configuration removed for now
+        TypeOrmModule.forRoot({
+            type: 'postgres',
+            host: process.env.DB_HOST || 'postgres',
+            port: parseInt(process.env.DB_PORT || '5432'),
+            username: process.env.DB_USERNAME || 'postgres',
+            password: process.env.DB_PASSWORD || 'postgres',
+            database: process.env.DB_NAME || 'planner_db',
+            entities: [Shipment, OutboxEvent, TrackingEvent],
+            synchronize: process.env.NODE_ENV !== 'production',
+            logging: process.env.NODE_ENV === 'development',
+        }),
+        TypeOrmModule.forFeature([Shipment, OutboxEvent, TrackingEvent]),
         CqrsModule.forRoot(),
         JwtModule.register({
             secret: process.env.JWT_SECRET || 'your-secret-key',

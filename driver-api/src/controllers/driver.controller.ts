@@ -89,6 +89,15 @@ export class DriverController {
         @Body() dto: UpdateLocationDto
     ) {
         // Konum güncelleme işlemi
+        const command = new UpdateDriverLocationCommand(
+            id,
+            dto.latitude,
+            dto.longitude,
+            dto.address
+        );
+
+        await this.commandBus.execute(command);
+
         const locationUpdate = {
             success: true,
             message: `Driver ${id} location updated successfully`,
