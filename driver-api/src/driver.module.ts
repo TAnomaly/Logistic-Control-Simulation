@@ -45,6 +45,7 @@ import { RedisService } from './infrastructure/redis/redis.service';
 import { CustomLogger } from './common/logger/logger.service';
 import { RouteService } from './services/route.service';
 import { CapacityService } from './services/capacity.service';
+import { DriverService } from './services/driver.service';
 
 // Controllers
 import { DriverController } from './controllers/driver.controller';
@@ -82,7 +83,7 @@ const EventHandlers: any[] = [];
             password: process.env.DB_PASSWORD || 'postgres',
             database: process.env.DB_NAME || 'driver_db',
             entities: [Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent],
-            synchronize: process.env.NODE_ENV !== 'production',
+            synchronize: false,
             logging: process.env.NODE_ENV === 'development',
         }),
         TypeOrmModule.forFeature([Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent]),
@@ -116,6 +117,7 @@ const EventHandlers: any[] = [];
         RedisService,
         RouteService,
         CapacityService,
+        DriverService,
         AuthService,
         JwtStrategy,
 

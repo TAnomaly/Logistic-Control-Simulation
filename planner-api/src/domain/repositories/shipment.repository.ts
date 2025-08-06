@@ -5,9 +5,7 @@ export interface ShipmentRepository {
     findById(id: string): Promise<Shipment | null>;
     findByTrackingNumber(trackingNumber: string): Promise<Shipment | null>;
     findByStatus(status: ShipmentStatus): Promise<Shipment[]>;
-    findByDriverId(driverId: string): Promise<Shipment[]>;
     findAll(): Promise<Shipment[]>;
     delete(id: string): Promise<void>;
     updateStatus(id: string, status: ShipmentStatus): Promise<Shipment>;
-    assignDriver(id: string, driverId: string): Promise<Shipment>;
 } 

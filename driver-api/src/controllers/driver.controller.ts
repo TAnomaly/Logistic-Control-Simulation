@@ -14,6 +14,7 @@ import { UserRole } from '../auth/jwt.strategy';
 import { CapacityService } from '../services/capacity.service';
 import { RouteService } from '../services/route.service';
 import { RabbitMQService } from '../infrastructure/rabbitmq/rabbitmq.service';
+import { DriverService } from '../services/driver.service';
 
 import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 
@@ -64,7 +65,8 @@ export class DriverController {
         private readonly queryBus: QueryBus,
         private readonly capacityService: CapacityService,
         private readonly routeService: RouteService,
-        private readonly rabbitMQService: RabbitMQService
+        private readonly rabbitMQService: RabbitMQService,
+        private readonly driverService: DriverService
     ) { }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -148,15 +150,19 @@ export class DriverController {
         return await this.queryBus.execute(query);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.DRIVER)
     @Get(':id/shipments')
-    async getDriverShipments(
-        @Param('id') driverId: string,
-        @Query('status') status?: string
-    ) {
-        const query = new GetDriverShipmentsQuery(driverId, status);
-        return await this.queryBus.execute(query);
+    async getDriverShipments(@Param('id') driverId: string) {
+        return await this.driverService.getDriverShipments(driverId);
+    }
+
+    @Get(':id/optimized-route')
+    async getDriverOptimizedRoute(@Param('id') driverId: string) {
+        return await this.driverService.getDriverOptimizedRoute(driverId);
+    }
+
+    @Get(':id/profile')
+    async getDriverProfile(@Param('id') driverId: string) {
+        return await this.driverService.getDriverProfile(driverId);
     }
 
     @Post(':id/assign-shipment')
@@ -216,8 +222,6 @@ export class DriverController {
         return await this.routeService.getActiveRoute(driverId);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.DRIVER)
     @Get(':id/current-route')
     async getCurrentRoute(@Param('id') driverId: string) {
         // Driver'ın mevcut rotasını getir

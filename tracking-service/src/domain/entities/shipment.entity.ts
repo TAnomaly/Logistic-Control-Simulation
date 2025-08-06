@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { TrackingEvent } from './tracking-event.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export enum ShipmentStatus {
     PENDING = 'pending',
@@ -39,19 +38,8 @@ export class Shipment {
     })
     status: ShipmentStatus;
 
-    // assignedDriverId kaldırıldı - artık driver_assignments table'ında tutulacak
-
-    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
-    pickupLatitude: number | null;
-
-    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
-    pickupLongitude: number | null;
-
-    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
-    deliveryLatitude: number | null;
-
-    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
-    deliveryLongitude: number | null;
+    // @Column({ nullable: true })
+    // assignedDriverId: string;
 
     @Column({ type: 'timestamp', nullable: true })
     estimatedDeliveryDate: Date;
@@ -59,12 +47,21 @@ export class Shipment {
     @Column({ type: 'timestamp', nullable: true })
     actualDeliveryDate: Date;
 
-    @OneToMany(() => TrackingEvent, trackingEvent => trackingEvent.shipment)
-    trackingEvents: TrackingEvent[];
+    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+    pickupLatitude: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+    pickupLongitude: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+    deliveryLatitude: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+    deliveryLongitude: number;
 
     @CreateDateColumn()
     createdAt: Date;
 
     @UpdateDateColumn()
     updatedAt: Date;
-} 
+}

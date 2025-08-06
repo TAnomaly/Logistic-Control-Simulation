@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
 import { TypeOrmOutboxEventRepository } from '../repositories/typeorm-outbox-event.repository';
 import * as amqp from 'amqplib';
@@ -10,6 +10,7 @@ export class OutboxProcessorService implements OnModuleInit {
     private channel: any;
 
     constructor(
+        @Inject('OutboxEventRepository')
         private readonly outboxEventRepository: TypeOrmOutboxEventRepository,
     ) { }
 

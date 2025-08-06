@@ -22,15 +22,15 @@ async function bootstrap() {
   });
 
   // Global validation pipe with enhanced configuration
-  app.useGlobalPipes(new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    },
-    errorHttpStatusCode: 422,
-  }));
+  // app.useGlobalPipes(new ValidationPipe({
+  //   transform: true,
+  //   whitelist: true,
+  //   forbidNonWhitelisted: true,
+  //   transformOptions: {
+  //     enableImplicitConversion: true,
+  //   },
+  //   errorHttpStatusCode: 422,
+  // }));
 
   // Global exception filter
   app.useGlobalFilters(new GlobalExceptionFilter());

@@ -6,6 +6,10 @@ export class CreateShipmentCommand {
         public readonly description?: string,
         public readonly weight: number = 0,
         public readonly volume: number = 0,
-        public readonly estimatedDeliveryDate?: Date
+        public readonly estimatedDeliveryDate?: Date,
+        public readonly pickupLatitude?: number,
+        public readonly pickupLongitude?: number,
+        public readonly deliveryLatitude?: number,
+        public readonly deliveryLongitude?: number
     ) { }
 } 

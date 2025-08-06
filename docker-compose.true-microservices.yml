@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: planner_db
+      POSTGRES_DB: driver_db
     ports:
       - "5432:5432"
     volumes:
@@ -72,7 +72,7 @@ services:
       DB_PORT: 5432
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      DB_NAME: planner_db
+      DB_NAME: driver_db
       REDIS_HOST: redis
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
@@ -88,14 +88,8 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
-    # healthcheck:
-    #   test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 40s
 
-    # Driver API Service
+  # Driver API Service
   driver-api:
     build:
       context: ./driver-api
@@ -114,6 +108,7 @@ services:
       RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
       JWT_SECRET: your-super-secret-key-here-change-in-production
       JWT_EXPIRES_IN: 15m
+      CORS_ORIGINS: http://localhost:8002,http://localhost:3000,http://localhost:3001,http://localhost:80
     ports:
       - "3001:3001"
     depends_on:
@@ -124,14 +119,8 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
-    # healthcheck:
-    #   test: [ "CMD", "curl", "-f", "http://localhost:3001/api/health" ]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 40s
 
-    # Nginx API Gateway
+  # Nginx API Gateway
   nginx:
     image: nginx:alpine
     container_name: logistic-nginx
@@ -142,69 +131,6 @@ services:
     depends_on:
       - planner-api
       - driver-api
-    restart: unless-stopped
-
-  # ML Service (NestJS with H3)
-  ml-service:
-    build:
-      context: ./ml-service
-      dockerfile: Dockerfile
-    container_name: logistic-ml-service
-    environment:
-      NODE_ENV: development
-      PORT: 8000
-      DRIVER_API_URL: http://driver-api:3001
-      PLANNER_API_URL: http://planner-api:3000
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
-    ports:
-      - "8000:8000"
-    depends_on:
-      driver-api:
-        condition: service_started
-      planner-api:
-        condition: service_started
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:8000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Webhook Consumer Service (NestJS)
-  webhook-consumer:
-    build:
-      context: ./ml-service
-      dockerfile: Dockerfile
-    container_name: logistic-webhook-consumer
-    environment:
-      NODE_ENV: development
-      PORT: 8001
-      DRIVER_API_URL: http://driver-api:3001
-      PLANNER_API_URL: http://planner-api:3000
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
-    ports:
-      - "8001:8001"
-    command: [ "node", "dist/main" ]
-    depends_on:
-      driver-api:
-        condition: service_started
-      planner-api:
-        condition: service_started
-      ml-service:
-        condition: service_started
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     restart: unless-stopped
 
   # Tracking Service (NestJS)

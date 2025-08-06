@@ -4,10 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Driver Tracking Dashboard</title>
+    <title>Logistic Control Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -27,7 +26,7 @@
         }
 
         .sidebar {
-            width: 350px;
+            width: 400px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-right: 1px solid rgba(255, 255, 255, 0.2);
@@ -54,6 +53,32 @@
             margin-bottom: 10px;
         }
 
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -62,16 +87,16 @@
             margin-right: 8px;
         }
 
-        .status-online {
+        .status-available {
             background-color: #4CAF50;
-        }
-
-        .status-offline {
-            background-color: #f44336;
         }
 
         .status-busy {
             background-color: #ff9800;
+        }
+
+        .status-offline {
+            background-color: #f44336;
         }
 
         .map-container {
@@ -207,7 +232,7 @@
             color: #666;
         }
 
-        .polyline-info {
+        .route-info {
             position: absolute;
             top: 20px;
             left: 20px;
@@ -215,19 +240,63 @@
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 300px;
+            max-width: 350px;
             z-index: 1000;
+            display: none;
         }
 
-        .polyline-info h3 {
+        .route-info h3 {
             margin-bottom: 10px;
             color: #333;
         }
 
-        .polyline-info p {
+        .route-info p {
             margin: 5px 0;
             color: #666;
             font-size: 14px;
+        }
+
+        .shipment-list {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .shipment-item {
+            background: #f8f9fa;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .filter-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background: #f0f0f0;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -235,7 +304,17 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <h2 style="margin-bottom: 20px; color: #333;">🚗 Aktif Sürücüler</h2>
+            <h2 style="margin-bottom: 20px; color: #333;">🚗 Sürücü Yönetimi</h2>
+
+            <input type="text" class="search-box" placeholder="🔍 Sürücü ara..." id="search-box">
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">Tümü</button>
+                <button class="filter-btn" data-filter="available">Müsait</button>
+                <button class="filter-btn" data-filter="busy">Meşgul</button>
+                <button class="filter-btn" data-filter="offline">Çevrimdışı</button>
+            </div>
+
             <div id="drivers-list">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -243,179 +322,275 @@
                 </div>
             </div>
         </div>
+
         <div class="main-content">
             <div class="header">
-                <h1>📍 Gerçek Zamanlı Sürücü Takibi</h1>
-                <p>Toplam aktif sürücü: <span id="total-drivers">0</span></p>
+                <h1>📍 Logistic Control Dashboard</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-drivers">0</div>
+                        <div class="stat-label">Toplam Sürücü</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="available-drivers">0</div>
+                        <div class="stat-label">Müsait</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="active-routes">0</div>
+                        <div class="stat-label">Aktif Rota</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-shipments">0</div>
+                        <div class="stat-label">Toplam Sipariş</div>
+                    </div>
+                </div>
             </div>
+
             <div class="map-container">
                 <div id="map"></div>
-                <div id="polyline-info" class="polyline-info" style="display: none;">
-                    <h3>📍 Rota Bilgileri</h3>
+                <div id="route-info" class="route-info">
+                    <h3>📍 Seçili Sürücü Bilgileri</h3>
                     <p><strong>Sürücü:</strong> <span id="selected-driver-name">-</span></p>
-                    <p><strong>Toplam Mesafe:</strong> <span id="total-distance">0</span> km</p>
-                    <p><strong>Ortalama Hız:</strong> <span id="average-speed">0</span> km/h</p>
-                    <p><strong>Konum Sayısı:</strong> <span id="location-count">0</span></p>
+                    <p><strong>Lisans:</strong> <span id="selected-driver-license">-</span></p>
+                    <p><strong>Durum:</strong> <span id="selected-driver-status">-</span></p>
+                    <p><strong>Kapasite:</strong> <span id="selected-driver-capacity">-</span></p>
+                    <p><strong>Aktif Rota:</strong> <span id="selected-driver-route">-</span></p>
+                    <div class="shipment-list">
+                        <h4>📦 Siparişler</h4>
+                        <div id="selected-driver-shipments">-</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div id="connection-status" class="connection-status disconnected">
         Bağlantı Yok
     </div>
+
     <script>
-        class DriverTrackingDashboard {
+        class LogisticDashboard {
             constructor() {
-                this.socket = null;
                 this.map = null;
                 this.drivers = new Map();
                 this.markers = new Map();
                 this.polylines = new Map();
                 this.selectedDriver = null;
+                this.currentFilter = 'all';
                 this.init();
             }
-            init() {
-                this.initSocket();
+
+            async init() {
                 this.initMap();
-                this.loadInitialData();
+                await this.loadDrivers();
+                this.setupEventListeners();
+                this.startAutoRefresh();
             }
-            initSocket() {
-                this.socket = io('http://localhost:8002');
-                this.socket.on('connect', () => {
-                    this.updateConnectionStatus(true);
-                    this.socket.emit('subscribe_to_drivers');
-                });
-                this.socket.on('disconnect', () => {
-                    this.updateConnectionStatus(false);
-                });
-                this.socket.on('drivers_update', (data) => {
-                    this.updateDrivers(data.drivers);
-                });
-                this.socket.on('driver_update', (data) => {
-                    this.updateDriver(data.driver);
-                });
-                this.socket.on('location_update', (data) => {
-                    this.updateDriverLocation(data.driverId, data.location);
-                });
-            }
+
             initMap() {
-                // Istanbul center coordinates
-                this.map = L.map('map').setView([41.0082, 28.9784], 10);
+                // Türkiye merkezi koordinatları
+                this.map = L.map('map').setView([39.9334, 32.8597], 6);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
                     attribution: '© OpenStreetMap'
                 }).addTo(this.map);
             }
-            async loadInitialData() {
+
+            async loadDrivers() {
                 try {
-                    const response = await fetch('http://localhost:8002/api/drivers');
-                    const data = await response.json();
-                    this.updateDrivers(data.drivers);
+                    this.updateConnectionStatus(true);
+
+                    // Driver API'den sürücüleri al
+                    const response = await fetch('http://localhost:80/api/driver/api/drivers');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const drivers = await response.json();
+
+                    this.drivers.clear();
+                    drivers.forEach(driver => {
+                        this.drivers.set(driver.id, {
+                            ...driver,
+                            currentLocation: driver.currentLocation || null,
+                            route: null,
+                            shipments: []
+                        });
+                    });
+
+                    // Her sürücü için rota ve sipariş bilgilerini al
+                    for (const [driverId, driver] of this.drivers) {
+                        await this.loadDriverDetails(driverId);
+                    }
+
+                    this.renderDriversList();
+                    this.updateMap();
+                    this.updateStats();
+
                 } catch (error) {
-                    console.error('Failed to load initial data:', error);
+                    console.error('Sürücüler yüklenirken hata:', error);
+                    this.updateConnectionStatus(false);
                 }
             }
-            updateConnectionStatus(connected) {
-                const statusElement = document.getElementById('connection-status');
-                if (connected) {
-                    statusElement.textContent = '🟢 Bağlı';
-                    statusElement.className = 'connection-status connected';
-                } else {
-                    statusElement.textContent = '🔴 Bağlantı Yok';
-                    statusElement.className = 'connection-status disconnected';
+
+            async loadDriverDetails(driverId) {
+                try {
+                    // Driver'ın rota bilgilerini al
+                    const routeResponse = await fetch(`http://localhost:80/api/driver/api/drivers/${driverId}/current-route`);
+                    const routeData = await routeResponse.json();
+
+                    if (routeData.success) {
+                        this.drivers.get(driverId).route = routeData;
+                    }
+
+                    // Driver'ın siparişlerini al
+                    const shipmentsResponse = await fetch(`http://localhost:80/api/driver/api/drivers/${driverId}/shipments`);
+                    const shipments = await shipmentsResponse.json();
+
+                    // Siparişler array ise kullan, değilse boş array ata
+                    if (Array.isArray(shipments)) {
+                        this.drivers.get(driverId).shipments = shipments;
+                    } else {
+                        console.warn(`Driver ${driverId} için siparişler array değil:`, shipments);
+                        this.drivers.get(driverId).shipments = [];
+                    }
+
+                } catch (error) {
+                    console.error(`Driver ${driverId} detayları yüklenirken hata:`, error);
+                    this.drivers.get(driverId).shipments = [];
                 }
             }
-            updateDrivers(drivers) {
-                this.drivers.clear();
-                drivers.forEach(driver => {
-                    this.drivers.set(driver.driverId, driver);
+
+            setupEventListeners() {
+                // Arama kutusu
+                document.getElementById('search-box').addEventListener('input', (e) => {
+                    this.filterDrivers(e.target.value);
                 });
-                this.renderDriversList();
-                this.updateMap();
-                this.updateTotalDrivers();
+
+                // Filtre butonları
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.currentFilter = e.target.dataset.filter;
+                        this.renderDriversList();
+                    });
+                });
             }
-            updateDriver(driver) {
-                this.drivers.set(driver.driverId, driver);
-                this.updateDriverInList(driver);
-                this.updateDriverOnMap(driver);
+
+            filterDrivers(searchTerm) {
+                const cards = document.querySelectorAll('.driver-card');
+                cards.forEach(card => {
+                    const driverName = card.querySelector('.driver-name').textContent.toLowerCase();
+                    const driverLicense = card.querySelector('.driver-license').textContent.toLowerCase();
+                    const matchesSearch = driverName.includes(searchTerm.toLowerCase()) ||
+                        driverLicense.includes(searchTerm.toLowerCase());
+
+                    card.style.display = matchesSearch ? 'block' : 'none';
+                });
             }
-            updateDriverLocation(driverId, location) {
-                const driver = this.drivers.get(driverId);
-                if (driver) {
-                    driver.currentLocation = location;
-                    this.updateDriverOnMap(driver);
-                    this.updatePolyline(driver);
-                }
-            }
+
             renderDriversList() {
                 const driversList = document.getElementById('drivers-list');
+
                 if (this.drivers.size === 0) {
-                    driversList.innerHTML = '<div class="no-drivers">Aktif sürücü bulunamadı</div>';
+                    driversList.innerHTML = '<div class="no-drivers">Sürücü bulunamadı</div>';
                     return;
                 }
-                driversList.innerHTML = Array.from(this.drivers.values())
+
+                const filteredDrivers = Array.from(this.drivers.values()).filter(driver => {
+                    if (this.currentFilter === 'all') return true;
+                    return driver.status === this.currentFilter;
+                });
+
+                driversList.innerHTML = filteredDrivers
                     .map(driver => this.createDriverCard(driver))
                     .join('');
             }
+
             createDriverCard(driver) {
-                const currentLocation = driver.currentLocation;
-                const polyline = driver.polyline;
+                const route = driver.route;
+                const shipments = driver.shipments || [];
+
+                // Güvenli değer dönüşümleri
+                const getDistance = () => {
+                    try {
+                        if (route && route.totalDistance) {
+                            const distance = parseFloat(route.totalDistance);
+                            return isNaN(distance) ? '0' : distance.toFixed(1);
+                        }
+                        return '0';
+                    } catch (error) {
+                        console.error('Mesafe hesaplama hatası:', error);
+                        return '0';
+                    }
+                };
+
+                const getTime = () => {
+                    try {
+                        if (route && route.totalTime) {
+                            const time = parseFloat(route.totalTime);
+                            return isNaN(time) ? 0 : Math.round(time / 60);
+                        }
+                        return 0;
+                    } catch (error) {
+                        console.error('Süre hesaplama hatası:', error);
+                        return 0;
+                    }
+                };
+
                 return `
-                    <div class="driver-card" data-driver-id="${driver.driverId}" onclick="dashboard.selectDriver('${driver.driverId}')">
+                    <div class="driver-card" data-driver-id="${driver.id}" onclick="dashboard.selectDriver('${driver.id}')">
                         <div class="driver-header">
                             <div>
-                                <div class="driver-name">${driver.name}</div>
-                                <div class="driver-license">${driver.licenseNumber}</div>
+                                <div class="driver-name">${driver.name || 'İsimsiz'}</div>
+                                <div class="driver-license">${driver.licenseNumber || 'Lisans Yok'}</div>
                             </div>
                             <div>
-                                <span class="status-indicator status-${driver.status}"></span>
-                                <span style="font-size: 12px; color: #666;">${driver.status}</span>
+                                <span class="status-indicator status-${driver.status || 'offline'}"></span>
+                                <span style="font-size: 12px; color: #666;">${driver.status || 'offline'}</span>
                             </div>
                         </div>
                         <div class="driver-stats">
                             <div class="stat-item">
+                                <div class="stat-label">Kapasite</div>
+                                <div class="stat-value">${driver.maxCapacity || '0'} kg</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Sipariş</div>
+                                <div class="stat-value">${shipments.length}</div>
+                            </div>
+                            <div class="stat-item">
                                 <div class="stat-label">Mesafe</div>
-                                <div class="stat-value">${polyline.totalDistance ? polyline.totalDistance.toFixed(1) : '0'} km</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Hız</div>
-                                <div class="stat-value">${polyline.averageSpeed ? polyline.averageSpeed.toFixed(1) : '0'} km/h</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Konum</div>
-                                <div class="stat-value">${polyline.locationCount || 0}</div>
+                                <div class="stat-value">${getDistance()} km</div>
                             </div>
                             <div class="stat-item">
                                 <div class="stat-label">Süre</div>
-                                <div class="stat-value">${polyline.duration ? Math.round(polyline.duration / 60000) : 0} dk</div>
+                                <div class="stat-value">${getTime()} dk</div>
                             </div>
                         </div>
                     </div>
                 `;
             }
-            updateDriverInList(driver) {
-                const driverCard = document.querySelector(`[data-driver-id="${driver.driverId}"]`);
-                if (driverCard) {
-                    driverCard.outerHTML = this.createDriverCard(driver);
-                }
-            }
+
             updateMap() {
-                // Clear existing markers and polylines
+                // Mevcut marker ve polyline'ları temizle
                 this.markers.forEach(marker => this.map.removeLayer(marker));
                 this.polylines.forEach(polyline => this.map.removeLayer(polyline));
                 this.markers.clear();
                 this.polylines.clear();
-                // Add new markers and polylines
+
+                // Yeni marker ve polyline'ları ekle
                 this.drivers.forEach(driver => {
                     this.addDriverToMap(driver);
                 });
             }
+
             addDriverToMap(driver) {
-                const currentLocation = driver.currentLocation;
-                if (!currentLocation || !currentLocation.coordinates) return;
-                const coordinates = currentLocation.coordinates;
-                // Create marker
-                const marker = L.marker([coordinates.latitude, coordinates.longitude], {
+                // Driver'ın mevcut konumunu al (varsayılan olarak Ankara)
+                const currentLocation = driver.currentLocation || { latitude: 39.9334, longitude: 32.8597 };
+
+                // Marker oluştur
+                const marker = L.marker([currentLocation.latitude, currentLocation.longitude], {
                     title: driver.name,
                     icon: L.icon({
                         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -426,69 +601,134 @@
                         shadowSize: [41, 41]
                     })
                 }).addTo(this.map);
-                marker.bindPopup(`<b>${driver.name}</b><br>${driver.licenseNumber}`);
-                this.markers.set(driver.driverId, marker);
-                // Create polyline
-                if (driver.polyline && driver.polyline.locations && driver.polyline.locations.length > 1) {
-                    const path = driver.polyline.locations.map(location => [location.coordinates.latitude, location.coordinates.longitude]);
-                    const polyline = L.polyline(path, { color: '#667eea', weight: 4 }).addTo(this.map);
-                    this.polylines.set(driver.driverId, polyline);
+
+                // Popup içeriği
+                const popupContent = `
+                    <b>${driver.name}</b><br>
+                    <small>${driver.licenseNumber}</small><br>
+                    <small>Durum: ${driver.status}</small><br>
+                    <small>Sipariş: ${Array.isArray(driver.shipments) ? driver.shipments.length : 0}</small>
+                `;
+
+                marker.bindPopup(popupContent);
+                this.markers.set(driver.id, marker);
+
+                // Rota polyline'ı oluştur
+                if (driver.route && driver.route.optimizedRoute) {
+                    this.createRoutePolyline(driver);
                 }
             }
-            updateDriverOnMap(driver) {
-                const marker = this.markers.get(driver.driverId);
-                if (marker && driver.currentLocation && driver.currentLocation.coordinates) {
-                    const coordinates = driver.currentLocation.coordinates;
-                    marker.setLatLng([coordinates.latitude, coordinates.longitude]);
+
+            async createRoutePolyline(driver) {
+                try {
+                    // Polyline'ı decode et
+                    const response = await fetch('http://localhost:8002/api/routes/decode-polyline', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ polyline: driver.route.optimizedRoute })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.data.points.length > 1) {
+                        const path = data.data.points.map(point => [point.lat, point.lng]);
+                        const polyline = L.polyline(path, {
+                            color: '#667eea',
+                            weight: 4,
+                            opacity: 0.8
+                        }).addTo(this.map);
+
+                        this.polylines.set(driver.id, polyline);
+                    }
+                } catch (error) {
+                    console.error(`Polyline decode hatası:`, error);
                 }
-                this.updatePolyline(driver);
             }
-            updatePolyline(driver) {
-                const polyline = this.polylines.get(driver.driverId);
-                if (polyline) {
-                    this.map.removeLayer(polyline);
-                }
-                if (driver.polyline && driver.polyline.locations && driver.polyline.locations.length > 1) {
-                    const path = driver.polyline.locations.map(location => [location.coordinates.latitude, location.coordinates.longitude]);
-                    const newPolyline = L.polyline(path, { color: '#667eea', weight: 4 }).addTo(this.map);
-                    this.polylines.set(driver.driverId, newPolyline);
-                }
-            }
+
             selectDriver(driverId) {
+                // Önceki seçimi temizle
                 document.querySelectorAll('.driver-card').forEach(card => {
                     card.classList.remove('selected');
                 });
+
+                // Yeni seçimi işaretle
                 const selectedCard = document.querySelector(`[data-driver-id="${driverId}"]`);
                 if (selectedCard) {
                     selectedCard.classList.add('selected');
                 }
+
                 this.selectedDriver = this.drivers.get(driverId);
-                this.showPolylineInfo();
+                this.showRouteInfo();
                 this.centerMapOnDriver();
             }
-            showPolylineInfo() {
+
+            showRouteInfo() {
                 if (!this.selectedDriver) return;
-                const polyline = this.selectedDriver.polyline;
-                const infoElement = document.getElementById('polyline-info');
-                document.getElementById('selected-driver-name').textContent = this.selectedDriver.name;
-                document.getElementById('total-distance').textContent = polyline.totalDistance ? polyline.totalDistance.toFixed(1) : '0';
-                document.getElementById('average-speed').textContent = polyline.averageSpeed ? polyline.averageSpeed.toFixed(1) : '0';
-                document.getElementById('location-count').textContent = polyline.locationCount || 0;
-                infoElement.style.display = 'block';
+
+                const driver = this.selectedDriver;
+                const route = driver.route;
+                const shipments = driver.shipments;
+
+                document.getElementById('selected-driver-name').textContent = driver.name;
+                document.getElementById('selected-driver-license').textContent = driver.licenseNumber;
+                document.getElementById('selected-driver-status').textContent = driver.status;
+                document.getElementById('selected-driver-capacity').textContent = `${driver.maxCapacity || 0} kg`;
+                document.getElementById('selected-driver-route').textContent = route && route.optimizedRoute ? 'Aktif' : 'Yok';
+
+                // Sipariş listesi
+                const shipmentsHtml = Array.isArray(shipments) && shipments.length > 0
+                    ? shipments.map(shipment => `
+                        <div class="shipment-item">
+                            <strong>${shipment.trackingNumber}</strong><br>
+                            ${shipment.origin} → ${shipment.destination}<br>
+                            ${shipment.weight} kg, ${shipment.volume} m³
+                        </div>
+                    `).join('')
+                    : '<div class="shipment-item">Sipariş yok</div>';
+
+                document.getElementById('selected-driver-shipments').innerHTML = shipmentsHtml;
+                document.getElementById('route-info').style.display = 'block';
             }
+
             centerMapOnDriver() {
-                if (!this.selectedDriver || !this.selectedDriver.currentLocation || !this.selectedDriver.currentLocation.coordinates) return;
-                const coordinates = this.selectedDriver.currentLocation.coordinates;
-                this.map.setView([coordinates.latitude, coordinates.longitude], 14);
+                if (!this.selectedDriver) return;
+
+                const currentLocation = this.selectedDriver.currentLocation || { latitude: 39.9334, longitude: 32.8597 };
+                this.map.setView([currentLocation.latitude, currentLocation.longitude], 12);
             }
-            updateTotalDrivers() {
-                document.getElementById('total-drivers').textContent = this.drivers.size;
+
+            updateStats() {
+                const drivers = Array.from(this.drivers.values());
+
+                document.getElementById('total-drivers').textContent = drivers.length;
+                document.getElementById('available-drivers').textContent = drivers.filter(d => d.status === 'available').length;
+                document.getElementById('active-routes').textContent = drivers.filter(d => d.route && d.route.success).length;
+                document.getElementById('total-shipments').textContent = drivers.reduce((sum, d) => sum + (Array.isArray(d.shipments) ? d.shipments.length : 0), 0);
+            }
+
+            updateConnectionStatus(connected) {
+                const statusElement = document.getElementById('connection-status');
+                if (connected) {
+                    statusElement.textContent = '🟢 Bağlı';
+                    statusElement.className = 'connection-status connected';
+                } else {
+                    statusElement.textContent = '🔴 Bağlantı Yok';
+                    statusElement.className = 'connection-status disconnected';
+                }
+            }
+
+            startAutoRefresh() {
+                // Her 30 saniyede bir verileri güncelle
+                setInterval(() => {
+                    this.loadDrivers();
+                }, 30000);
             }
         }
-        // Initialize dashboard when page loads
+
+        // Dashboard'u başlat
         let dashboard;
         window.addEventListener('load', () => {
-            dashboard = new DriverTrackingDashboard();
+            dashboard = new LogisticDashboard();
         });
     </script>
 </body>

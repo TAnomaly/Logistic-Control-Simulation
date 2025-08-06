@@ -1,97 +1,91 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { OutboxEventRepository } from '../../domain/repositories/outbox-event.repository';
 import { OutboxEvent, OutboxEventStatus } from '../../domain/entities/outbox-event.entity';
 
 @Injectable()
 export class TypeOrmOutboxEventRepository implements OutboxEventRepository {
-    private outboxEvents: OutboxEvent[] = [];
-
-    constructor() { }
+    constructor(
+        @InjectRepository(OutboxEvent)
+        private readonly repository: Repository<OutboxEvent>
+    ) { }
 
     async save(outboxEvent: OutboxEvent): Promise<OutboxEvent> {
-        if (!outboxEvent.id) {
-            outboxEvent.id = Math.random().toString(36).substr(2, 9);
-            outboxEvent.createdAt = new Date();
-        }
-        outboxEvent.updatedAt = new Date();
-
-        const existingIndex = this.outboxEvents.findIndex(e => e.id === outboxEvent.id);
-        if (existingIndex >= 0) {
-            this.outboxEvents[existingIndex] = outboxEvent;
-        } else {
-            this.outboxEvents.push(outboxEvent);
-        }
-
-        return outboxEvent;
+        return await this.repository.save(outboxEvent);
     }
 
     async findById(id: string): Promise<OutboxEvent | null> {
-        return this.outboxEvents.find(e => e.id === id) || null;
+        return await this.repository.findOne({ where: { id } });
     }
 
     async findPending(): Promise<OutboxEvent[]> {
-        return this.outboxEvents.filter(e => e.status === OutboxEventStatus.PENDING);
+        return await this.repository.find({ where: { status: OutboxEventStatus.PENDING } });
     }
 
     async findByEventType(eventType: string): Promise<OutboxEvent[]> {
-        return this.outboxEvents.filter(e => e.eventType === eventType);
+        return await this.repository.find({ where: { eventType } });
     }
 
     async markAsProcessing(id: string): Promise<void> {
-        const event = await this.findById(id);
-        if (event) {
-            event.status = OutboxEventStatus.PROCESSING;
-            event.updatedAt = new Date();
-        }
+        await this.repository.update(id, {
+            status: OutboxEventStatus.PROCESSING,
+            updatedAt: new Date()
+        });
     }
 
     async markAsCompleted(id: string): Promise<void> {
-        const event = await this.findById(id);
-        if (event) {
-            event.status = OutboxEventStatus.COMPLETED;
-            event.processedAt = new Date();
-            event.updatedAt = new Date();
-        }
+        await this.repository.update(id, {
+            status: OutboxEventStatus.COMPLETED,
+            processedAt: new Date(),
+            updatedAt: new Date()
+        });
     }
 
     async markAsFailed(id: string, errorMessage: string): Promise<void> {
-        const event = await this.findById(id);
-        if (event) {
-            event.status = OutboxEventStatus.FAILED;
-            event.errorMessage = errorMessage;
-            event.updatedAt = new Date();
-        }
+        await this.repository.update(id, {
+            status: OutboxEventStatus.FAILED,
+            errorMessage,
+            updatedAt: new Date()
+        });
     }
 
     async incrementRetryCount(id: string): Promise<void> {
         const event = await this.findById(id);
         if (event) {
-            event.retryCount = (event.retryCount || 0) + 1;
-            event.updatedAt = new Date();
+            await this.repository.update(id, {
+                retryCount: (event.retryCount || 0) + 1,
+                updatedAt: new Date()
+            });
         }
     }
 
     async delete(id: string): Promise<void> {
-        this.outboxEvents = this.outboxEvents.filter(e => e.id !== id);
+        await this.repository.delete(id);
     }
 
     async findPendingEvents(): Promise<OutboxEvent[]> {
-        return this.findPending();
+        return await this.findPending();
     }
 
     async updateStatus(id: string, status: OutboxEventStatus, errorMessage?: string): Promise<void> {
-        const event = await this.findById(id);
-        if (event) {
-            event.status = status;
-            event.errorMessage = errorMessage;
-            if (status === OutboxEventStatus.PROCESSED) {
-                event.processedAt = new Date();
-            }
-            event.updatedAt = new Date();
+        const updateData: any = {
+            status,
+            updatedAt: new Date()
+        };
+
+        if (errorMessage) {
+            updateData.errorMessage = errorMessage;
         }
+
+        if (status === OutboxEventStatus.PROCESSED) {
+            updateData.processedAt = new Date();
+        }
+
+        await this.repository.update(id, updateData);
     }
 
     async deleteProcessedEvents(): Promise<void> {
-        this.outboxEvents = this.outboxEvents.filter(e => e.status !== OutboxEventStatus.PROCESSED);
+        await this.repository.delete({ status: OutboxEventStatus.PROCESSED });
     }
 } 
