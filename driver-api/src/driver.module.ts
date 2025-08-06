@@ -28,6 +28,7 @@ import { AssignShipmentCommand } from './application/commands/assign-shipment.co
 // Application Queries
 import { GetDriversQuery } from './application/queries/get-drivers.query';
 import { GetDriverShipmentsQuery } from './application/queries/get-driver-shipments.query';
+import { GetDriverByIdQuery } from './application/queries/get-driver-by-id.query';
 
 // Application Handlers
 import { CreateDriverHandler } from './application/handlers/create-driver.handler';
@@ -35,6 +36,7 @@ import { UpdateDriverLocationHandler } from './application/handlers/update-drive
 import { AssignShipmentHandler } from './application/handlers/assign-shipment.handler';
 import { GetDriversHandler } from './application/handlers/get-drivers.handler';
 import { GetDriverShipmentsHandler } from './application/handlers/get-driver-shipments.handler';
+import { GetDriverByIdHandler } from './application/handlers/get-driver-by-id.handler';
 
 // Infrastructure Services
 import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor.service';
@@ -68,6 +70,7 @@ const CommandHandlers = [
 const QueryHandlers = [
     GetDriversHandler,
     GetDriverShipmentsHandler,
+    GetDriverByIdHandler,
 ];
 
 const EventHandlers: any[] = [];

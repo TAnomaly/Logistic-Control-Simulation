@@ -301,7 +301,7 @@ export class H3RouteService {
     /**
      * Polyline'ı encode et (Google Polyline Algorithm)
      */
-    private encodePolyline(points: Location[]): string {
+    encodePolyline(points: Location[]): string {
         let encoded = '';
         let lastLat = 0;
         let lastLng = 0;
@@ -582,7 +582,7 @@ export class H3RouteService {
     /**
      * Toplam mesafe hesapla
      */
-    private calculateTotalDistance(polyline: Location[]): number {
+    calculateTotalDistance(polyline: Location[]): number {
         let totalDistance = 0;
 
         for (let i = 1; i < polyline.length; i++) {

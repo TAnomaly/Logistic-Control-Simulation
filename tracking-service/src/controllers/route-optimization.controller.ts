@@ -2,6 +2,7 @@ import { Controller, Post, Get, Param, Body } from '@nestjs/common';
 import { RouteOptimizationService } from '../services/route-optimization.service';
 import { DriverRoute } from '../domain/entities/driver-route.entity';
 import { H3RouteService } from '../services/h3-route.service';
+import axios from 'axios';
 
 @Controller('routes')
 export class RouteOptimizationController {
@@ -199,6 +200,140 @@ export class RouteOptimizationController {
             return {
                 success: false,
                 message: `Polyline decode başarısız: ${error.message}`
+            };
+        }
+    }
+
+    /**
+     * Driver'ın polyline'ına yeni konum ekle
+     */
+    @Post('update-polyline/:driverId')
+    async updateDriverPolyline(
+        @Param('driverId') driverId: string,
+        @Body() locationData: { latitude: number; longitude: number; address?: string }
+    ): Promise<{
+        success: boolean;
+        message: string;
+        data?: {
+            driverId: string;
+            newLocation: { lat: number; lng: number };
+            updatedRoute: DriverRoute;
+        };
+    }> {
+        try {
+            console.log(`📍 API: Driver ${driverId} polyline güncelleme isteği`);
+
+            const newLocation = {
+                lat: locationData.latitude,
+                lng: locationData.longitude
+            };
+
+            const result = await this.routeOptimizationService.updateDriverPolyline(driverId, newLocation);
+
+            if (result) {
+                return {
+                    success: true,
+                    message: 'Polyline başarıyla güncellendi',
+                    data: {
+                        driverId,
+                        newLocation,
+                        updatedRoute: result
+                    }
+                };
+            } else {
+                return {
+                    success: false,
+                    message: 'Polyline güncellenemedi - aktif rota bulunamadı',
+                    data: { driverId, newLocation } as any
+                };
+            }
+        } catch (error) {
+            console.error(`❌ API: Driver ${driverId} polyline güncelleme başarısız:`, error.message);
+
+            return {
+                success: false,
+                message: `Polyline güncelleme başarısız: ${error.message}`
+            };
+        }
+    }
+
+    /**
+     * Driver'ın aktif route'unu ve güncel konumunu getir (Dashboard için)
+     */
+    @Get('driver/:driverId/dashboard')
+    async getDriverDashboardData(@Param('driverId') driverId: string): Promise<{
+        success: boolean;
+        message: string;
+        data?: {
+            driverId: string;
+            currentLocation: { lat: number; lng: number; address?: string } | null;
+            activeRoute: DriverRoute | null;
+            polylinePoints: Array<{ lat: number; lng: number }>;
+            waypoints: Array<{
+                lat: number;
+                lng: number;
+                type: string;
+                shipmentId?: string;
+            }>;
+        };
+    }> {
+        try {
+            console.log(`🗺️ API: Driver ${driverId} dashboard verisi isteği`);
+
+            // 1. Driver'ın güncel konumunu al
+            let currentLocation = null;
+            try {
+                const driverResponse = await axios.get(`http://logistic-driver-api:3001/api/drivers`);
+                const drivers = driverResponse.data;
+                const driver = drivers.find((d: any) => d.id === driverId);
+                if (driver && driver.currentLocation) {
+                    currentLocation = {
+                        lat: driver.currentLocation.latitude,
+                        lng: driver.currentLocation.longitude,
+                        address: driver.currentLocation.address
+                    };
+                }
+            } catch (error) {
+                console.warn(`⚠️ Driver ${driverId} konum bilgisi alınamadı:`, error.message);
+            }
+
+            // 2. Aktif route'u al
+            const activeRoute = await this.routeOptimizationService.getDriverActiveRoute(driverId);
+
+            // 3. Polyline'ı decode et
+            let polylinePoints: Array<{ lat: number; lng: number }> = [];
+            let waypoints: Array<{ lat: number; lng: number; type: string; shipmentId?: string }> = [];
+
+            if (activeRoute && activeRoute.optimizedRoute) {
+                // Polyline decode
+                polylinePoints = this.h3RouteService.decodePolyline(activeRoute.optimizedRoute.polyline);
+
+                // Waypoints'i düzenle
+                waypoints = activeRoute.optimizedRoute.waypoints.map((wp: any) => ({
+                    lat: wp.latitude,
+                    lng: wp.longitude,
+                    type: wp.type,
+                    shipmentId: wp.shipmentId
+                }));
+            }
+
+            return {
+                success: true,
+                message: 'Dashboard verisi başarıyla getirildi',
+                data: {
+                    driverId,
+                    currentLocation,
+                    activeRoute,
+                    polylinePoints,
+                    waypoints
+                }
+            };
+        } catch (error) {
+            console.error(`❌ API: Driver ${driverId} dashboard verisi getirme başarısız:`, error.message);
+
+            return {
+                success: false,
+                message: `Dashboard verisi getirme başarısız: ${error.message}`
             };
         }
     }

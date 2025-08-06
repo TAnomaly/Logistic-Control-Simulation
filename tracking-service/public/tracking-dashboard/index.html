@@ -434,15 +434,20 @@
 
             async loadDriverDetails(driverId) {
                 try {
-                    // Driver'ın rota bilgilerini al
-                    const routeResponse = await fetch(`http://localhost:80/api/driver/api/drivers/${driverId}/current-route`);
-                    const routeData = await routeResponse.json();
+                    // Yeni dashboard endpoint'ini kullan
+                    const dashboardResponse = await fetch(`http://localhost:8002/api/routes/driver/${driverId}/dashboard`);
+                    const dashboardData = await dashboardResponse.json();
 
-                    if (routeData.success) {
-                        this.drivers.get(driverId).route = routeData;
+                    if (dashboardData.success) {
+                        const driver = this.drivers.get(driverId);
+                        driver.dashboardData = dashboardData.data;
+                        driver.currentLocation = dashboardData.data.currentLocation;
+                        driver.route = dashboardData.data.activeRoute;
+                        driver.polylinePoints = dashboardData.data.polylinePoints;
+                        driver.waypoints = dashboardData.data.waypoints;
                     }
 
-                    // Driver'ın siparişlerini al
+                    // Driver'ın siparişlerini al (eski endpoint)
                     const shipmentsResponse = await fetch(`http://localhost:80/api/driver/api/drivers/${driverId}/shipments`);
                     const shipments = await shipmentsResponse.json();
 
@@ -586,11 +591,11 @@
             }
 
             addDriverToMap(driver) {
-                // Driver'ın mevcut konumunu al (varsayılan olarak Ankara)
-                const currentLocation = driver.currentLocation || { latitude: 39.9334, longitude: 32.8597 };
+                // Driver'ın güncel konumunu al
+                const currentLocation = driver.currentLocation || { lat: 39.9334, lng: 32.8597 };
 
                 // Marker oluştur
-                const marker = L.marker([currentLocation.latitude, currentLocation.longitude], {
+                const marker = L.marker([currentLocation.lat, currentLocation.lng], {
                     title: driver.name,
                     icon: L.icon({
                         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -608,30 +613,29 @@
                     <small>${driver.licenseNumber}</small><br>
                     <small>Durum: ${driver.status}</small><br>
                     <small>Sipariş: ${Array.isArray(driver.shipments) ? driver.shipments.length : 0}</small>
+                    ${driver.currentLocation ? `<br><small>📍 ${driver.currentLocation.address || 'Konum bilgisi'}</small>` : ''}
                 `;
 
                 marker.bindPopup(popupContent);
                 this.markers.set(driver.id, marker);
 
-                // Rota polyline'ı oluştur
-                if (driver.route && driver.route.optimizedRoute) {
+                // Rota polyline'ı ve waypoints oluştur
+                if (driver.polylinePoints && driver.polylinePoints.length > 0) {
                     this.createRoutePolyline(driver);
+                }
+
+                // Waypoints ekle
+                if (driver.waypoints && driver.waypoints.length > 0) {
+                    this.addWaypoints(driver);
                 }
             }
 
-            async createRoutePolyline(driver) {
+            createRoutePolyline(driver) {
                 try {
-                    // Polyline'ı decode et
-                    const response = await fetch('http://localhost:8002/api/routes/decode-polyline', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ polyline: driver.route.optimizedRoute })
-                    });
+                    if (driver.polylinePoints && driver.polylinePoints.length > 1) {
+                        const path = driver.polylinePoints.map(point => [point.lat, point.lng]);
 
-                    const data = await response.json();
-
-                    if (data.success && data.data.points.length > 1) {
-                        const path = data.data.points.map(point => [point.lat, point.lng]);
+                        // Polyline oluştur
                         const polyline = L.polyline(path, {
                             color: '#667eea',
                             weight: 4,
@@ -639,9 +643,55 @@
                         }).addTo(this.map);
 
                         this.polylines.set(driver.id, polyline);
+
+                        // Haritayı polyline'a göre fit et
+                        if (this.selectedDriver && this.selectedDriver.id === driver.id) {
+                            this.map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+                        }
                     }
                 } catch (error) {
-                    console.error(`Polyline decode hatası:`, error);
+                    console.error(`Polyline oluşturma hatası:`, error);
+                }
+            }
+
+            addWaypoints(driver) {
+                try {
+                    driver.waypoints.forEach((waypoint, index) => {
+                        // Waypoint marker'ı oluştur
+                        const icon = L.divIcon({
+                            className: 'waypoint-marker',
+                            html: `<div style="
+                                background-color: ${waypoint.type === 'pickup' ? '#4CAF50' : '#FF9800'};
+                                color: white;
+                                border-radius: 50%;
+                                width: 20px;
+                                height: 20px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 10px;
+                                font-weight: bold;
+                                border: 2px solid white;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                            ">${waypoint.type === 'pickup' ? 'P' : 'D'}</div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+
+                        const marker = L.marker([waypoint.lat, waypoint.lng], { icon }).addTo(this.map);
+
+                        // Waypoint popup'ı
+                        const popupContent = `
+                            <b>${waypoint.type === 'pickup' ? '📦 Toplama' : '🚚 Teslimat'}</b><br>
+                            <small>Koordinat: ${waypoint.lat.toFixed(4)}, ${waypoint.lng.toFixed(4)}</small>
+                            ${waypoint.shipmentId ? `<br><small>Sipariş ID: ${waypoint.shipmentId.substring(0, 8)}...</small>` : ''}
+                        `;
+
+                        marker.bindPopup(popupContent);
+                        this.markers.set(`${driver.id}-waypoint-${index}`, marker);
+                    });
+                } catch (error) {
+                    console.error(`Waypoints ekleme hatası:`, error);
                 }
             }
 
@@ -693,8 +743,8 @@
             centerMapOnDriver() {
                 if (!this.selectedDriver) return;
 
-                const currentLocation = this.selectedDriver.currentLocation || { latitude: 39.9334, longitude: 32.8597 };
-                this.map.setView([currentLocation.latitude, currentLocation.longitude], 12);
+                const currentLocation = this.selectedDriver.currentLocation || { lat: 39.9334, lng: 32.8597 };
+                this.map.setView([currentLocation.lat, currentLocation.lng], 12);
             }
 
             updateStats() {

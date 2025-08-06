@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { H3RouteService, ShipmentLocation } from './h3-route.service';
+import { H3RouteService, ShipmentLocation, Location } from './h3-route.service';
 import { TypeOrmDriverRouteRepository } from '../infrastructure/repositories/typeorm-driver-route.repository';
 import { DriverRoute } from '../domain/entities/driver-route.entity';
 import { Repository } from 'typeorm';
 import { DriverAssignment, AssignmentStatus } from '../domain/entities/driver-assignment.entity';
 import { Shipment } from '../domain/entities/shipment.entity';
+import axios from 'axios';
 
 @Injectable()
 export class RouteOptimizationService {
@@ -34,10 +35,15 @@ export class RouteOptimizationService {
 
             console.log(`📦 ${shipments.length} aktif shipment bulundu`);
 
-            // H3 ile optimize route hesapla
+            // Driver'ın mevcut konumunu al
+            const driverLocation = await this.getDriverCurrentLocation(driverId);
+            console.log(`📍 Driver ${driverId} mevcut konumu:`, driverLocation);
+
+            // H3 ile optimize route hesapla (driver konumu ile)
             const optimizedRoute = await this.h3RouteService.calculateOptimizedRoute(
                 driverId,
-                shipments
+                shipments,
+                driverLocation
             );
 
             // Mevcut aktif route'ları deaktif et
@@ -111,8 +117,8 @@ export class RouteOptimizationService {
     }
 
     /**
-     * Driver'ın aktif shipment'larını al (production-ready, DB'den)
-     */
+ * Driver'ın aktif shipment'larını al (production-ready, DB'den)
+ */
     private async getDriverActiveShipments(driverId: string): Promise<ShipmentLocation[]> {
         // Aktif assignment'ları çek
         const assignments = await this.assignmentRepo.find({
@@ -125,21 +131,53 @@ export class RouteOptimizationService {
 
         // Shipment ID'lerini topla
         const shipmentIds = assignments.map(a => a.shipmentId);
-        const shipments = await this.shipmentRepo.findByIds(shipmentIds);
+
+        // TypeORM'in yeni syntax'ını kullan
+        const shipments = await this.shipmentRepo.find({
+            where: shipmentIds.map(id => ({ id }))
+        });
 
         // ShipmentLocation array'ine dönüştür
         return shipments.map(shipment => ({
             shipmentId: shipment.id,
             trackingNumber: shipment.trackingNumber,
             pickup: {
-                lat: Number(shipment.pickupLatitude),
-                lng: Number(shipment.pickupLongitude)
+                lat: Number(shipment.pickupLatitude) || 0,
+                lng: Number(shipment.pickupLongitude) || 0
             },
             delivery: {
-                lat: Number(shipment.deliveryLatitude),
-                lng: Number(shipment.deliveryLongitude)
+                lat: Number(shipment.deliveryLatitude) || 0,
+                lng: Number(shipment.deliveryLongitude) || 0
             }
-        }));
+        })).filter(shipment =>
+            shipment.pickup.lat !== 0 && shipment.pickup.lng !== 0 &&
+            shipment.delivery.lat !== 0 && shipment.delivery.lng !== 0
+        );
+    }
+
+    /**
+ * Driver'ın mevcut konumunu al (Driver API'den)
+ */
+    private async getDriverCurrentLocation(driverId: string): Promise<Location | null> {
+        try {
+            // Driver API'den driver bilgilerini al
+            const response = await axios.get(`http://localhost:80/api/driver/api/drivers/${driverId}`);
+
+            if (response.data && response.data.currentLocation) {
+                console.log(`📍 Driver ${driverId} konumu alındı:`, response.data.currentLocation);
+                return {
+                    lat: response.data.currentLocation.latitude,
+                    lng: response.data.currentLocation.longitude
+                };
+            }
+
+            console.log(`⚠️ Driver ${driverId} için currentLocation bulunamadı`);
+            return null;
+
+        } catch (error) {
+            console.error(`❌ Driver ${driverId} konumu alınamadı:`, error.message);
+            return null;
+        }
     }
 
     /**
@@ -199,5 +237,51 @@ export class RouteOptimizationService {
      */
     async getAllRoutes(): Promise<DriverRoute[]> {
         return await this.driverRouteRepository.findAll();
+    }
+
+    /**
+     * Driver'ın polyline'ına yeni konum ekle
+     */
+    async updateDriverPolyline(driverId: string, newLocation: Location): Promise<DriverRoute | null> {
+        try {
+            console.log(`🔄 Driver ${driverId} polyline güncelleniyor...`);
+
+            // Driver'ın aktif rotasını al
+            const activeRoute = await this.getDriverActiveRoute(driverId);
+
+            if (!activeRoute || !activeRoute.optimizedRoute) {
+                console.log(`⚠️ Driver ${driverId} için aktif rota bulunamadı`);
+                return null;
+            }
+
+            // Mevcut polyline'ı decode et
+            const currentPolyline = this.h3RouteService.decodePolyline(activeRoute.optimizedRoute.polyline);
+
+            // Yeni konumu polyline'a ekle
+            const updatedPolyline = [...currentPolyline, newLocation];
+
+            // Güncellenmiş polyline'ı encode et
+            const encodedPolyline = this.h3RouteService.encodePolyline(updatedPolyline);
+
+            // Toplam mesafeyi hesapla
+            const totalDistance = this.h3RouteService.calculateTotalDistance(updatedPolyline);
+
+            // Rota bilgilerini güncelle
+            activeRoute.optimizedRoute.polyline = encodedPolyline;
+            activeRoute.totalDistance = totalDistance;
+            activeRoute.fuelEstimate = totalDistance * 0.1; // 0.1 L/km
+            activeRoute.updatedAt = new Date();
+
+            // Güncellenmiş rotayı kaydet
+            const updatedRoute = await this.driverRouteRepository.save(activeRoute);
+
+            console.log(`✅ Driver ${driverId} polyline güncellendi. Yeni mesafe: ${totalDistance.toFixed(2)} km`);
+
+            return updatedRoute;
+
+        } catch (error) {
+            console.error(`❌ Driver ${driverId} polyline güncelleme hatası:`, error.message);
+            return null;
+        }
     }
 } 

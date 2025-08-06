@@ -5,6 +5,7 @@ import { AssignShipmentCommand } from '../application/commands/assign-shipment.c
 import { UpdateDriverLocationCommand } from '../application/commands/update-driver-location.command';
 import { GetDriversQuery } from '../application/queries/get-drivers.query';
 import { GetDriverShipmentsQuery } from '../application/queries/get-driver-shipments.query';
+import { GetDriverByIdQuery } from '../application/queries/get-driver-by-id.query';
 import { Driver, DriverStatus } from '../domain/entities/driver.entity';
 import { DriverAssignment, AssignmentStatus } from '../domain/entities/driver-assignment.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -139,6 +140,14 @@ export class DriverController {
     @Get()
     async getDrivers(@Query('status') status?: DriverStatus): Promise<Driver[]> {
         const query = new GetDriversQuery(status);
+        return await this.queryBus.execute(query);
+    }
+
+    // @UseGuards(JwtAuthGuard, RolesGuard)
+    // @Roles(UserRole.ADMIN, UserRole.DISPATCHER, UserRole.DRIVER)
+    @Get(':id')
+    async getDriver(@Param('id') id: string): Promise<Driver> {
+        const query = new GetDriverByIdQuery(id);
         return await this.queryBus.execute(query);
     }
 

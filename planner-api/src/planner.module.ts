@@ -39,6 +39,7 @@ import { RedisService } from './infrastructure/redis/redis.service';
 // Common Services
 import { CustomLogger } from './common/logger/logger.service';
 import { DriverService } from './application/services/driver.service';
+import { GeocodingService } from './services/geocoding.service';
 
 // Controllers
 import { ShipmentController } from './controllers/shipment.controller';
@@ -95,6 +96,7 @@ const EventHandlers: any[] = [];
         // Common Services
         CustomLogger,
         DriverService,
+        GeocodingService,
 
         // Repositories
         TypeOrmShipmentRepository,

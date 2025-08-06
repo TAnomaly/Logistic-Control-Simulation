@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../auth/jwt.strategy';
+import { GeocodingService } from '../services/geocoding.service';
 
 export class CreateShipmentDto {
     trackingNumber: string;
@@ -45,13 +46,27 @@ export class AssignShipmentDto {
 export class ShipmentController {
     constructor(
         private readonly commandBus: CommandBus,
-        private readonly queryBus: QueryBus
+        private readonly queryBus: QueryBus,
+        private readonly geocodingService: GeocodingService
     ) { }
 
     // @UseGuards(JwtAuthGuard, RolesGuard) // Geçici olarak devre dışı
     // @Roles(UserRole.PLANNER, UserRole.ADMIN, UserRole.DISPATCHER) // Geçici olarak devre dışı
     @Post()
     async createShipment(@Body() dto: CreateShipmentDto): Promise<Shipment> {
+        console.log(`🔍 Starting geocoding for: ${dto.origin} → ${dto.destination}`);
+
+        // Şehir isimlerini koordinatlara çevir
+        const originCoords = await this.geocodingService.geocodeTurkishCity(dto.origin);
+        console.log(`📍 Origin coords:`, originCoords);
+
+        const destinationCoords = await this.geocodingService.geocodeTurkishCity(dto.destination);
+        console.log(`📍 Destination coords:`, destinationCoords);
+
+        if (!originCoords || !destinationCoords) {
+            throw new Error(`Geocoding failed for origin: ${dto.origin} or destination: ${dto.destination}`);
+        }
+
         const command = new CreateShipmentCommand(
             dto.trackingNumber,
             dto.origin,
@@ -59,7 +74,11 @@ export class ShipmentController {
             dto.description,
             dto.weight,
             dto.volume,
-            dto.estimatedDeliveryDate
+            dto.estimatedDeliveryDate,
+            originCoords.latitude,
+            originCoords.longitude,
+            destinationCoords.latitude,
+            destinationCoords.longitude
         );
 
         return await this.commandBus.execute(command);
