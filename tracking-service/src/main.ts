@@ -1,11 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { TrackingModule } from './tracking.module';
+import { SimpleTrackingModule } from './simple-tracking.module';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-    const app = await NestFactory.create<NestExpressApplication>(TrackingModule);
+    const app = await NestFactory.create<NestExpressApplication>(SimpleTrackingModule);
 
     // Enable CORS
     app.enableCors({
@@ -20,11 +20,16 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
     }));
 
-    // Global prefix
-    app.setGlobalPrefix('api');
+    // Global prefix - sadece belirli route'lar için
+    // app.setGlobalPrefix('api'); // Bu satırı kaldırıyoruz
 
     // Serve static files
     app.useStaticAssets(join(__dirname, '..', 'public'));
+
+    // Serve tracking dashboard at /tracking-dashboard/
+    app.useStaticAssets(join(__dirname, '..', 'public', 'tracking-dashboard'), {
+        prefix: '/tracking-dashboard/',
+    });
 
     const port = process.env.PORT || 8002;
     await app.listen(port);

@@ -1,7 +1,7 @@
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.3-alpine
     container_name: logistic-postgres
     environment:
       POSTGRES_USER: postgres
@@ -19,7 +19,7 @@ services:
 
   # Database Migration Service
   db-migration:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.3-alpine
     container_name: logistic-db-migration
     environment:
       DB_HOST: postgres
@@ -37,7 +37,11 @@ services:
           sleep 2;
         done &&
         echo 'Database is ready!' &&
-        psql -h postgres -p 5432 -U postgres -d driver_db -f /migrations/001_add_missing_columns.sql
+        echo 'Running enhanced route migrations...' &&
+        psql -h postgres -p 5432 -U postgres -d driver_db -c 'CREATE EXTENSION IF NOT EXISTS postgis;' &&
+        echo 'PostGIS extension enabled' &&
+        psql -h postgres -p 5432 -U postgres -d driver_db -f /migrations/001_add_missing_columns.sql &&
+        echo 'Migration completed successfully!'
       "
     depends_on:
       postgres:
@@ -169,11 +173,18 @@ services:
     environment:
       NODE_ENV: development
       PORT: 8002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: driver_db
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
     ports:
       - "8002:8002"
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
