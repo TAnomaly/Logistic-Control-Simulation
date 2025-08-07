@@ -17,6 +17,33 @@ services:
       timeout: 5s
       retries: 5
 
+  # Database Migration Service
+  db-migration:
+    image: postgres:15-alpine
+    container_name: logistic-db-migration
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: driver_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      PGPASSWORD: postgres
+    volumes:
+      - ./shared/migrations:/migrations:ro
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        until pg_isready -h postgres -p 5432 -U postgres; do
+          sleep 2;
+        done &&
+        echo 'Database is ready!' &&
+        psql -h postgres -p 5432 -U postgres -d driver_db -f /migrations/001_add_missing_columns.sql
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   # Redis Cache
   redis:
     image: redis:7-alpine
@@ -81,8 +108,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-migration:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       rabbitmq:
@@ -112,8 +139,8 @@ services:
     ports:
       - "3001:3001"
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-migration:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       rabbitmq:
