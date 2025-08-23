@@ -8,11 +8,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { Shipment } from './domain/entities/shipment.entity';
 import { OutboxEvent } from './domain/entities/outbox-event.entity';
 import { TrackingEvent } from './domain/entities/tracking-event.entity';
+import { Driver } from './domain/entities/driver.entity';
+import { DriverAssignment } from './domain/entities/driver-assignment.entity';
 
 // Infrastructure Repositories
 import { TypeOrmShipmentRepository } from './infrastructure/repositories/typeorm-shipment.repository';
 import { TypeOrmOutboxEventRepository } from './infrastructure/repositories/typeorm-outbox-event.repository';
 import { TypeOrmTrackingEventRepository } from './infrastructure/repositories/typeorm-tracking-event.repository';
+import { TypeOrmDriverAssignmentRepository } from './infrastructure/repositories/typeorm-driver-assignment.repository';
 
 // Application Commands
 import { CreateShipmentCommand } from './application/commands/create-shipment.command';
@@ -35,9 +38,12 @@ import { RedisService } from './infrastructure/redis/redis.service';
 
 // Common Services
 import { CustomLogger } from './common/logger/logger.service';
+import { DriverService } from './application/services/driver.service';
+import { GeocodingService } from './services/geocoding.service';
 
 // Controllers
 import { ShipmentController } from './controllers/shipment.controller';
+import { DriverController } from './controllers/driver.controller';
 import { AuthController } from './auth/auth.controller';
 import { HealthController } from './common/health/health.controller';
 import { AuthService } from './auth/auth.service';
@@ -68,12 +74,12 @@ const EventHandlers: any[] = [];
             port: parseInt(process.env.DB_PORT || '5432'),
             username: process.env.DB_USERNAME || 'postgres',
             password: process.env.DB_PASSWORD || 'postgres',
-            database: process.env.DB_NAME || 'planner_db',
-            entities: [Shipment, OutboxEvent, TrackingEvent],
+            database: 'driver_db', // Driver DB'ye bağlan
+            entities: [Shipment, OutboxEvent, TrackingEvent, Driver, DriverAssignment],
             synchronize: process.env.NODE_ENV !== 'production',
             logging: process.env.NODE_ENV === 'development',
         }),
-        TypeOrmModule.forFeature([Shipment, OutboxEvent, TrackingEvent]),
+        TypeOrmModule.forFeature([Shipment, OutboxEvent, TrackingEvent, Driver, DriverAssignment]),
         CqrsModule.forRoot(),
         JwtModule.register({
             secret: process.env.JWT_SECRET || 'your-secret-key',
@@ -82,17 +88,24 @@ const EventHandlers: any[] = [];
     ],
     controllers: [
         ShipmentController,
+        DriverController,
         AuthController,
         HealthController,
     ],
     providers: [
         // Common Services
         CustomLogger,
+        DriverService,
+        GeocodingService,
 
         // Repositories
         TypeOrmShipmentRepository,
+        TypeOrmDriverAssignmentRepository,
         TypeOrmOutboxEventRepository,
-        TypeOrmTrackingEventRepository,
+        {
+            provide: 'TrackingEventRepository',
+            useClass: TypeOrmTrackingEventRepository,
+        },
 
         // Services
         OutboxProcessorService,
@@ -113,11 +126,6 @@ const EventHandlers: any[] = [];
     exports: [
         // Common Services
         CustomLogger,
-
-        // Repositories
-        TypeOrmShipmentRepository,
-        TypeOrmOutboxEventRepository,
-        TypeOrmTrackingEventRepository,
 
         // Services
         OutboxProcessorService,

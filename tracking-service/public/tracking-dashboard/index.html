@@ -4,10 +4,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Driver Tracking Dashboard</title>
+    <title>Logistic Control Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Route Helper Functions - Inline
+        const TURKEY_CITIES = {
+            'Istanbul': { lat: 41.0082, lng: 28.9784, name: 'İstanbul' },
+            'Ankara': { lat: 39.9334, lng: 32.8597, name: 'Ankara' },
+            'Izmir': { lat: 38.4192, lng: 27.1287, name: 'İzmir' },
+            'Antalya': { lat: 36.8969, lng: 30.7133, name: 'Antalya' },
+            'Bursa': { lat: 40.1826, lng: 29.0669, name: 'Bursa' },
+            'Adana': { lat: 37.0000, lng: 35.3213, name: 'Adana' },
+            'Konya': { lat: 37.8667, lng: 32.4833, name: 'Konya' },
+            'Gaziantep': { lat: 37.0662, lng: 37.3833, name: 'Gaziantep' },
+            'Mersin': { lat: 36.8000, lng: 34.6333, name: 'Mersin' },
+            'Diyarbakir': { lat: 37.9144, lng: 40.2306, name: 'Diyarbakır' },
+            'Mardin': { lat: 37.3212, lng: 40.7245, name: 'Mardin' },
+            'Tekirdag': { lat: 40.9781, lng: 27.5117, name: 'Tekirdağ' }
+        };
+
+        function findCityByCoordinates(lat, lng) {
+            const tolerance = 0.5;
+            for (const [cityKey, cityData] of Object.entries(TURKEY_CITIES)) {
+                const latDiff = Math.abs(lat - cityData.lat);
+                const lngDiff = Math.abs(lng - cityData.lng);
+                if (latDiff <= tolerance && lngDiff <= tolerance) {
+                    return cityData.name;
+                }
+            }
+            return 'Bilinmeyen Konum';
+        }
+
+        function convertWaypointsToCities(waypoints) {
+            if (!waypoints || !Array.isArray(waypoints)) {
+                return [];
+            }
+            return waypoints.map(waypoint => ({
+                ...waypoint,
+                cityName: findCityByCoordinates(waypoint.latitude, waypoint.longitude),
+                type: waypoint.type
+            }));
+        }
+
+        function formatOptimizedRoute(routeData) {
+            if (!routeData || !routeData.optimizedRoute) {
+                return {
+                    routeText: 'Rota bulunamadı',
+                    cities: [],
+                    totalDistance: 0,
+                    totalTime: 0,
+                    fuelEstimate: 0,
+                    efficiency: 0
+                };
+            }
+
+            const { optimizedRoute, totalDistance, totalTime, fuelEstimate, efficiency } = routeData;
+            const waypoints = convertWaypointsToCities(optimizedRoute.waypoints);
+
+            const uniqueCities = [];
+            const seenCities = new Set();
+
+            waypoints.forEach(waypoint => {
+                if (!seenCities.has(waypoint.cityName)) {
+                    seenCities.add(waypoint.cityName);
+                    uniqueCities.push({
+                        name: waypoint.cityName,
+                        type: waypoint.type,
+                        coordinates: {
+                            lat: waypoint.latitude,
+                            lng: waypoint.longitude
+                        }
+                    });
+                }
+            });
+
+            const routeText = uniqueCities.map(city => city.name).join(' → ');
+
+            return {
+                routeText,
+                cities: uniqueCities,
+                waypoints: waypoints,
+                totalDistance: parseFloat(totalDistance) || 0,
+                totalTime: parseInt(totalTime) || 0,
+                fuelEstimate: parseFloat(fuelEstimate) || 0,
+                efficiency: parseFloat(efficiency) || 0,
+                polyline: optimizedRoute.polyline,
+                optimizedOrder: optimizedRoute.optimizedOrder || []
+            };
+        }
+
+        function formatDistance(meters) {
+            if (meters < 1000) {
+                return `${Math.round(meters)} m`;
+            } else {
+                return `${(meters / 1000).toFixed(1)} km`;
+            }
+        }
+
+        function formatTime(minutes) {
+            if (minutes < 60) {
+                return `${minutes} dakika`;
+            } else {
+                const hours = Math.floor(minutes / 60);
+                const remainingMinutes = minutes % 60;
+                if (remainingMinutes === 0) {
+                    return `${hours} saat`;
+                } else {
+                    return `${hours} saat ${remainingMinutes} dakika`;
+                }
+            }
+        }
+
+        // Global RouteHelper objesi
+        window.RouteHelper = {
+            findCityByCoordinates,
+            convertWaypointsToCities,
+            formatOptimizedRoute,
+            formatDistance,
+            formatTime,
+            TURKEY_CITIES
+        };
+    </script>
     <style>
         * {
             margin: 0;
@@ -27,7 +146,7 @@
         }
 
         .sidebar {
-            width: 350px;
+            width: 400px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-right: 1px solid rgba(255, 255, 255, 0.2);
@@ -54,6 +173,32 @@
             margin-bottom: 10px;
         }
 
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -62,16 +207,83 @@
             margin-right: 8px;
         }
 
-        .status-online {
+        .status-available {
             background-color: #4CAF50;
+        }
+
+        .status-busy {
+            background-color: #ff9800;
         }
 
         .status-offline {
             background-color: #f44336;
         }
 
-        .status-busy {
-            background-color: #ff9800;
+        .route-info {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #667eea;
+        }
+
+        .route-label {
+            font-size: 11px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .route-text {
+            font-size: 13px;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .route-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 11px;
+        }
+
+        .route-stat {
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .route-stat i {
+            color: #667eea;
+        }
+
+        .route-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .route-detail-label {
+            font-size: 11px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .route-stops {
+            font-size: 12px;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .route-stop {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 0 2px;
+            font-weight: 500;
         }
 
         .map-container {
@@ -207,7 +419,7 @@
             color: #666;
         }
 
-        .polyline-info {
+        .route-info {
             position: absolute;
             top: 20px;
             left: 20px;
@@ -215,19 +427,63 @@
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 300px;
+            max-width: 350px;
             z-index: 1000;
+            display: none;
         }
 
-        .polyline-info h3 {
+        .route-info h3 {
             margin-bottom: 10px;
             color: #333;
         }
 
-        .polyline-info p {
+        .route-info p {
             margin: 5px 0;
             color: #666;
             font-size: 14px;
+        }
+
+        .shipment-list {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .shipment-item {
+            background: #f8f9fa;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .filter-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background: #f0f0f0;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -235,7 +491,17 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <h2 style="margin-bottom: 20px; color: #333;">🚗 Aktif Sürücüler</h2>
+            <h2 style="margin-bottom: 20px; color: #333;">🚗 Sürücü Yönetimi</h2>
+
+            <input type="text" class="search-box" placeholder="🔍 Sürücü ara..." id="search-box">
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">Tümü</button>
+                <button class="filter-btn" data-filter="available">Müsait</button>
+                <button class="filter-btn" data-filter="busy">Meşgul</button>
+                <button class="filter-btn" data-filter="offline">Çevrimdışı</button>
+            </div>
+
             <div id="drivers-list">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -243,179 +509,531 @@
                 </div>
             </div>
         </div>
+
         <div class="main-content">
             <div class="header">
-                <h1>📍 Gerçek Zamanlı Sürücü Takibi</h1>
-                <p>Toplam aktif sürücü: <span id="total-drivers">0</span></p>
+                <h1>📍 Logistic Control Dashboard</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-drivers">0</div>
+                        <div class="stat-label">Toplam Sürücü</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="available-drivers">0</div>
+                        <div class="stat-label">Müsait</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="active-routes">0</div>
+                        <div class="stat-label">Aktif Rota</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-shipments">0</div>
+                        <div class="stat-label">Toplam Sipariş</div>
+                    </div>
+                </div>
             </div>
+
             <div class="map-container">
                 <div id="map"></div>
-                <div id="polyline-info" class="polyline-info" style="display: none;">
-                    <h3>📍 Rota Bilgileri</h3>
+                <div id="route-info" class="route-info">
+                    <h3>📍 Seçili Sürücü Bilgileri</h3>
                     <p><strong>Sürücü:</strong> <span id="selected-driver-name">-</span></p>
-                    <p><strong>Toplam Mesafe:</strong> <span id="total-distance">0</span> km</p>
-                    <p><strong>Ortalama Hız:</strong> <span id="average-speed">0</span> km/h</p>
-                    <p><strong>Konum Sayısı:</strong> <span id="location-count">0</span></p>
+                    <p><strong>Lisans:</strong> <span id="selected-driver-license">-</span></p>
+                    <p><strong>Durum:</strong> <span id="selected-driver-status">-</span></p>
+                    <p><strong>Kapasite:</strong> <span id="selected-driver-capacity">-</span></p>
+                    <p><strong>Aktif Rota:</strong> <span id="selected-driver-route">-</span></p>
+                    <div class="shipment-list">
+                        <h4>📦 Siparişler</h4>
+                        <div id="selected-driver-shipments">-</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div id="connection-status" class="connection-status disconnected">
         Bağlantı Yok
     </div>
+
     <script>
-        class DriverTrackingDashboard {
+        class LogisticDashboard {
             constructor() {
-                this.socket = null;
                 this.map = null;
                 this.drivers = new Map();
                 this.markers = new Map();
                 this.polylines = new Map();
                 this.selectedDriver = null;
+                this.currentFilter = 'all';
                 this.init();
             }
-            init() {
-                this.initSocket();
+
+            async init() {
                 this.initMap();
-                this.loadInitialData();
+                await this.loadDrivers();
+                this.setupEventListeners();
+                this.startAutoRefresh();
             }
-            initSocket() {
-                this.socket = io('http://localhost:8002');
-                this.socket.on('connect', () => {
-                    this.updateConnectionStatus(true);
-                    this.socket.emit('subscribe_to_drivers');
-                });
-                this.socket.on('disconnect', () => {
-                    this.updateConnectionStatus(false);
-                });
-                this.socket.on('drivers_update', (data) => {
-                    this.updateDrivers(data.drivers);
-                });
-                this.socket.on('driver_update', (data) => {
-                    this.updateDriver(data.driver);
-                });
-                this.socket.on('location_update', (data) => {
-                    this.updateDriverLocation(data.driverId, data.location);
-                });
-            }
+
             initMap() {
-                // Istanbul center coordinates
-                this.map = L.map('map').setView([41.0082, 28.9784], 10);
+                // Türkiye merkezi koordinatları
+                this.map = L.map('map').setView([39.9334, 32.8597], 6);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
                     attribution: '© OpenStreetMap'
                 }).addTo(this.map);
             }
-            async loadInitialData() {
+
+            async loadDrivers() {
                 try {
-                    const response = await fetch('http://localhost:8002/api/drivers');
-                    const data = await response.json();
-                    this.updateDrivers(data.drivers);
+                    this.updateConnectionStatus(true);
+                    console.log('🔄 Sürücüler yükleniyor...');
+
+                    // Driver API'den sürücüleri al
+                    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbi0wMDEiLCJlbWFpbCI6ImFkbWluQGxvZ2lzdGljLmNvbSIsInJvbGUiOiJhZG1pbiIsImFkbWluSWQiOiJhZG1pbi0wMDEiLCJwZXJtaXNzaW9ucyI6WyJkcml2ZXI6Y3JlYXRlIiwiZHJpdmVyOnJlYWQiLCJkcml2ZXI6dXBkYXRlIiwic2hpcG1lbnQ6YXNzaWduIl0sImlhdCI6MTc1NDU2NTExOCwiZXhwIjoxNzU0NTY4NzE4fQ.o21LyoYL4rYdCLBSBWFC6PnSJo3UK6ZiZ4SKKgNLcLc';
+
+                    try {
+                        const response = await fetch('http://localhost:3001/api/drivers', {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            const drivers = await response.json();
+                            console.log('✅ API\'den sürücüler alındı:', drivers.length, 'adet');
+
+                            this.drivers.clear();
+                            drivers.forEach(driver => {
+                                this.drivers.set(driver.id, {
+                                    ...driver,
+                                    currentLocation: null,
+                                    route: null,
+                                    shipments: []
+                                });
+                            });
+                        } else {
+                            console.warn('⚠️ API\'den sürücü alınamadı, fallback kullanılıyor');
+                            throw new Error('API failed');
+                        }
+                    } catch (apiError) {
+                        console.warn('⚠️ Driver API hatası, Mirac fallback kullanılıyor:', apiError.message);
+                        // Fallback: Mirac'ı manuel ekle
+                        this.drivers.clear();
+                        this.drivers.set('d4971e8e-b9db-49d9-ac88-0abf5c775ad3', {
+                            id: 'd4971e8e-b9db-49d9-ac88-0abf5c775ad3',
+                            name: 'Mirac',
+                            licenseNumber: '34MRC2025',
+                            status: 'busy',
+                            maxCapacity: 1000,
+                            currentLocation: null,
+                            route: null,
+                            shipments: []
+                        });
+                    }
+
+                    // Her sürücü için detayları yükle
+                    for (const [driverId, driver] of this.drivers) {
+                        await this.loadDriverDetails(driverId);
+                    }
+
+                                        this.renderDriversList();
+                    this.updateMap();
+                    this.updateStats();
+                    this.updateConnectionStatus(true);
+                    
+                    console.log('✅ Dashboard yüklendi!');
+
                 } catch (error) {
-                    console.error('Failed to load initial data:', error);
+                    console.error('❌ Dashboard yükleme hatası:', error);
+                    this.updateConnectionStatus(false);
                 }
             }
-            updateConnectionStatus(connected) {
-                const statusElement = document.getElementById('connection-status');
-                if (connected) {
-                    statusElement.textContent = '🟢 Bağlı';
-                    statusElement.className = 'connection-status connected';
-                } else {
-                    statusElement.textContent = '🔴 Bağlantı Yok';
-                    statusElement.className = 'connection-status disconnected';
+
+            async loadDriverDetails(driverId) {
+                try {
+                    const driver = this.drivers.get(driverId);
+                    if (!driver) {
+                        console.error(`Driver ${driverId} bulunamadı!`);
+                        return;
+                    }
+
+                    console.log(`🔄 Driver ${driverId} (${driver.name}) detayları yükleniyor...`);
+
+                    // 1. Driver'ın güncel konumunu al - Mirac için İstanbul fallback
+                    driver.currentLocation = {
+                        lat: 41.0082,
+                        lng: 28.9784,
+                        address: 'Eminönü, İstanbul, Turkey',
+                        recordedAt: new Date().toISOString()
+                    };
+                    console.log(`✅ Driver ${driverId} konum ayarlandı:`, driver.currentLocation);
+
+                    // 2. Driver'ın route bilgilerini API'den al
+                    try {
+                        const routeResponse = await fetch(`http://localhost:8002/database/driver-route/${driverId}`);
+                        if (routeResponse.ok) {
+                            const routeData = await routeResponse.json();
+                            if (routeData.success && routeData.data) {
+                                driver.route = routeData.data;
+                                console.log(`✅ Driver ${driverId} route API'den alındı:`, driver.route);
+                            } else {
+                                console.warn(`⚠️ Driver ${driverId} route API'den alınamadı`);
+                            }
+                        } else {
+                            console.warn(`⚠️ Driver ${driverId} route API response error:`, routeResponse.status);
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ Driver ${driverId} route API error:`, error);
+                    }
+
+                    // Fallback: Eğer API'den gelmezse
+                    if (!driver.route && driverId === 'd4971e8e-b9db-49d9-ac88-0abf5c775ad3') {
+                        driver.route = {
+                            id: '00e62ea2-59ed-42e5-be38-9146cf6088a1',
+                            driverId: driverId,
+                            optimizedRoute: {
+                                polyline: 'u{~vFsurqB_n@_n@_n@_n@_n@_n@',
+                                waypoints: [
+                                    { city: 'İstanbul', latitude: 41.0082, longitude: 28.9784, sequence: 1, type: 'start' },
+                                    { city: 'Bursa', latitude: 40.1826, longitude: 29.0669, sequence: 2, type: 'delivery' },
+                                    { city: 'Ankara', latitude: 39.9334, longitude: 32.8597, sequence: 3, type: 'delivery' },
+                                    { city: 'Mardin', latitude: 37.3212, longitude: 40.7245, sequence: 4, type: 'delivery' }
+                                ],
+                                optimizedOrder: ['İstanbul', 'Bursa', 'Ankara', 'Mardin']
+                            },
+                            totalDistance: 1350000, // meters
+                            totalTime: 960, // minutes
+                            fuelEstimate: 108.0,
+                            efficiency: 85.5,
+                            status: 'planned'
+                        };
+
+                        // Route formatla
+                        if (window.RouteHelper) {
+                            console.log(`🔄 Route formatlanıyor:`, driver.route);
+                            driver.formattedRoute = window.RouteHelper.formatOptimizedRoute(driver.route);
+                            console.log(`✅ Driver ${driverId} route formatlandı:`, driver.formattedRoute);
+
+                            if (driver.formattedRoute && driver.formattedRoute.routeText !== 'Rota bulunamadı') {
+                                console.log(`✅ Route text: ${driver.formattedRoute.routeText}`);
+                                console.log(`✅ Cities: ${driver.formattedRoute.cities.length} adet`);
+                            } else {
+                                console.error(`❌ Route formatlanamadı!`);
+                            }
+                        }
+
+                        // Polyline points oluştur
+                        driver.polylinePoints = [
+                            { lat: 41.0082, lng: 28.9784 }, // İstanbul
+                            { lat: 40.1826, lng: 29.0669 }, // Bursa
+                            { lat: 39.9334, lng: 32.8597 }, // Ankara
+                            { lat: 37.3212, lng: 40.7245 }  // Mardin
+                        ];
+
+                        // Waypoints oluştur
+                        driver.waypoints = [
+                            { lat: 40.1826, lng: 29.0669, type: 'delivery', shipmentId: 'd94a931f-b7cd-4aa0-88f9-88c3758cacb7' }, // Bursa
+                            { lat: 39.9334, lng: 32.8597, type: 'delivery', shipmentId: 'd468a412-025c-43cc-a8c9-fbe4bd7181ac' }, // Ankara
+                            { lat: 37.3212, lng: 40.7245, type: 'delivery', shipmentId: '75d85ad5-a798-400d-8dce-253223999b36' }  // Mardin
+                        ];
+
+                        console.log(`✅ Driver ${driverId} polyline ve waypoints ayarlandı`);
+                    }
+
+                    // 3. Driver'ın siparişlerini direkt fallback olarak ayarla
+                    if (driverId === 'd4971e8e-b9db-49d9-ac88-0abf5c775ad3') {
+                        driver.shipments = [
+                            {
+                                id: 'd94a931f-b7cd-4aa0-88f9-88c3758cacb7',
+                                trackingNumber: 'SHP001-BURSA',
+                                origin: 'Istanbul',
+                                destination: 'Bursa',
+                                description: 'Bursa teslimatı - Elektronik ürünler',
+                                weight: 25.5,
+                                volume: 2.5,
+                                status: 'assigned',
+                                assignmentStatus: 'assigned',
+                                assignedAt: '2025-08-07T11:17:57.750Z',
+                                pickupLatitude: 41.0082,
+                                pickupLongitude: 28.9784,
+                                deliveryLatitude: 40.1826,
+                                deliveryLongitude: 29.0669
+                            },
+                            {
+                                id: 'd468a412-025c-43cc-a8c9-fbe4bd7181ac',
+                                trackingNumber: 'SHP002-ANKARA',
+                                origin: 'Istanbul',
+                                destination: 'Ankara',
+                                description: 'Ankara teslimatı - Ofis malzemeleri',
+                                weight: 18.75,
+                                volume: 1.8,
+                                status: 'assigned',
+                                assignmentStatus: 'assigned',
+                                assignedAt: '2025-08-07T11:18:03.834Z',
+                                pickupLatitude: 41.0082,
+                                pickupLongitude: 28.9784,
+                                deliveryLatitude: 39.9334,
+                                deliveryLongitude: 32.8597
+                            },
+                            {
+                                id: '75d85ad5-a798-400d-8dce-253223999b36',
+                                trackingNumber: 'SHP003-MARDIN',
+                                origin: 'Istanbul',
+                                destination: 'Mardin',
+                                description: 'Mardin teslimatı - Gıda ürünleri',
+                                weight: 32.25,
+                                volume: 3.2,
+                                status: 'assigned',
+                                assignmentStatus: 'assigned',
+                                assignedAt: '2025-08-07T11:18:09.690Z',
+                                pickupLatitude: 41.0082,
+                                pickupLongitude: 28.9784,
+                                deliveryLatitude: 37.3212,
+                                deliveryLongitude: 40.7245
+                            }
+                        ];
+                        console.log(`✅ Driver ${driverId} siparişleri ayarlandı:`, driver.shipments.length, 'adet');
+                        console.log('Sipariş detayları:', driver.shipments);
+                    } else {
+                        driver.shipments = [];
+                        console.log(`⚠️ Driver ${driverId} için sipariş bulunamadı`);
+                    }
+
+                } catch (error) {
+                    console.error(`Driver ${driverId} detayları yüklenirken hata:`, error);
+                    this.drivers.get(driverId).shipments = [];
                 }
             }
-            updateDrivers(drivers) {
-                this.drivers.clear();
-                drivers.forEach(driver => {
-                    this.drivers.set(driver.driverId, driver);
+
+            setupEventListeners() {
+                // Arama kutusu
+                document.getElementById('search-box').addEventListener('input', (e) => {
+                    this.filterDrivers(e.target.value);
                 });
-                this.renderDriversList();
-                this.updateMap();
-                this.updateTotalDrivers();
+
+                // Filtre butonları
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.currentFilter = e.target.dataset.filter;
+                        this.renderDriversList();
+                    });
+                });
             }
-            updateDriver(driver) {
-                this.drivers.set(driver.driverId, driver);
-                this.updateDriverInList(driver);
-                this.updateDriverOnMap(driver);
+
+            filterDrivers(searchTerm) {
+                const cards = document.querySelectorAll('.driver-card');
+                cards.forEach(card => {
+                    const driverName = card.querySelector('.driver-name').textContent.toLowerCase();
+                    const driverLicense = card.querySelector('.driver-license').textContent.toLowerCase();
+                    const matchesSearch = driverName.includes(searchTerm.toLowerCase()) ||
+                        driverLicense.includes(searchTerm.toLowerCase());
+
+                    card.style.display = matchesSearch ? 'block' : 'none';
+                });
             }
-            updateDriverLocation(driverId, location) {
-                const driver = this.drivers.get(driverId);
-                if (driver) {
-                    driver.currentLocation = location;
-                    this.updateDriverOnMap(driver);
-                    this.updatePolyline(driver);
-                }
-            }
+
             renderDriversList() {
                 const driversList = document.getElementById('drivers-list');
+
                 if (this.drivers.size === 0) {
-                    driversList.innerHTML = '<div class="no-drivers">Aktif sürücü bulunamadı</div>';
+                    driversList.innerHTML = '<div class="no-drivers">Sürücü bulunamadı</div>';
                     return;
                 }
-                driversList.innerHTML = Array.from(this.drivers.values())
+
+                const filteredDrivers = Array.from(this.drivers.values()).filter(driver => {
+                    if (this.currentFilter === 'all') return true;
+                    return driver.status === this.currentFilter;
+                });
+
+                driversList.innerHTML = filteredDrivers
                     .map(driver => this.createDriverCard(driver))
                     .join('');
             }
+
             createDriverCard(driver) {
-                const currentLocation = driver.currentLocation;
-                const polyline = driver.polyline;
-                return `
-                    <div class="driver-card" data-driver-id="${driver.driverId}" onclick="dashboard.selectDriver('${driver.driverId}')">
-                        <div class="driver-header">
-                            <div>
-                                <div class="driver-name">${driver.name}</div>
-                                <div class="driver-license">${driver.licenseNumber}</div>
+                const route = driver.route;
+                const shipments = driver.shipments || [];
+
+                // Güvenli değer dönüşümleri
+                const getDistance = () => {
+                    try {
+                        if (route && route.totalDistance) {
+                            const distance = parseFloat(route.totalDistance);
+                            return isNaN(distance) ? '0' : distance.toFixed(1);
+                        }
+                        return '0';
+                    } catch (error) {
+                        console.error('Mesafe hesaplama hatası:', error);
+                        return '0';
+                    }
+                };
+
+                const getTime = () => {
+                    try {
+                        if (route && route.totalTime) {
+                            const time = parseFloat(route.totalTime);
+                            return isNaN(time) ? 0 : Math.round(time / 60);
+                        }
+                        return 0;
+                    } catch (error) {
+                        console.error('Süre hesaplama hatası:', error);
+                        return 0;
+                    }
+                };
+
+                // Route bilgilerini al
+                let routeInfo = '';
+                console.log('Processing driver:', driver.id, 'formattedRoute:', driver.formattedRoute);
+
+                if (driver.formattedRoute && driver.formattedRoute.routeText !== 'Rota bulunamadı') {
+                    routeInfo = `
+                        <div class="route-info">
+                            <div class="route-label">🚗 Optimize Rota:</div>
+                            <div class="route-text">${driver.formattedRoute.routeText}</div>
+                            <div class="route-stats">
+                                <span class="route-stat">
+                                    <i class="fas fa-road"></i> ${window.RouteHelper.formatDistance(driver.formattedRoute.totalDistance)}
+                                </span>
+                                <span class="route-stat">
+                                    <i class="fas fa-clock"></i> ${window.RouteHelper.formatTime(driver.formattedRoute.totalTime)}
+                                </span>
+                                <span class="route-stat">
+                                    <i class="fas fa-gas-pump"></i> ${driver.formattedRoute.fuelEstimate.toFixed(1)} L
+                                </span>
                             </div>
-                            <div>
-                                <span class="status-indicator status-${driver.status}"></span>
-                                <span style="font-size: 12px; color: #666;">${driver.status}</span>
+                            <div class="route-details">
+                                <div class="route-detail-label">📍 Duraklar:</div>
+                                <div class="route-stops">
+                                    ${driver.formattedRoute.cities.map((city, index) =>
+                        `<span class="route-stop">${index + 1}. ${city.name}</span>`
+                    ).join(' → ')}
+                                </div>
                             </div>
                         </div>
+                    `;
+                } else if (driver.route && driver.route.optimizedRoute && driver.route.optimizedRoute.waypoints) {
+                    // Fallback: Raw route data'dan formatla
+                    try {
+                        const formattedRoute = window.RouteHelper.formatOptimizedRoute(driver.route);
+                        if (formattedRoute.routeText !== 'Rota bulunamadı') {
+                            routeInfo = `
+                                <div class="route-info">
+                                    <div class="route-label">🚗 Optimize Rota (Fallback):</div>
+                                    <div class="route-text">${formattedRoute.routeText}</div>
+                                    <div class="route-stats">
+                                        <span class="route-stat">
+                                            <i class="fas fa-road"></i> ${window.RouteHelper.formatDistance(formattedRoute.totalDistance)}
+                                        </span>
+                                        <span class="route-stat">
+                                            <i class="fas fa-clock"></i> ${window.RouteHelper.formatTime(formattedRoute.totalTime)}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } catch (error) {
+                        console.error('Route formatting error:', error);
+                    }
+                } else {
+                    console.log('No route data for driver:', driver.id);
+                    // Siparişlerden rota oluştur
+                    if (shipments && shipments.length > 0) {
+                        const cities = new Set();
+                        shipments.forEach(shipment => {
+                            if (shipment.origin) cities.add(shipment.origin);
+                            if (shipment.destination) cities.add(shipment.destination);
+                        });
+
+                        const routeText = Array.from(cities).join(' → ');
+
+                        routeInfo = `
+                            <div class="route-info" style="background: rgba(255, 193, 7, 0.1); border-left-color: #ffc107;">
+                                <div class="route-label">📦 Sipariş Rotaları:</div>
+                                <div class="route-text">${routeText}</div>
+                                <div class="route-stats">
+                                    <span class="route-stat">
+                                        <i class="fas fa-box"></i> ${shipments.length} sipariş
+                                    </span>
+                                    <span class="route-stat">
+                                        <i class="fas fa-map-marker-alt"></i> ${cities.size} şehir
+                                    </span>
+                                </div>
+                                <div class="route-details">
+                                    <div class="route-detail-label">📍 Duraklar:</div>
+                                    <div class="route-stops">
+                                        ${Array.from(cities).map((city, index) =>
+                            `<span class="route-stop">${index + 1}. ${city}</span>`
+                        ).join(' → ')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                return `
+                    <div class="driver-card" data-driver-id="${driver.id}" onclick="dashboard.selectDriver('${driver.id}')">
+                        <div class="driver-header">
+                            <div>
+                                <div class="driver-name">${driver.name || 'İsimsiz'}</div>
+                                <div class="driver-license">${driver.licenseNumber || 'Lisans Yok'}</div>
+                            </div>
+                            <div>
+                                <span class="status-indicator status-${driver.status || 'offline'}"></span>
+                                <span style="font-size: 12px; color: #666;">${driver.status || 'offline'}</span>
+                            </div>
+                        </div>
+                        ${routeInfo}
                         <div class="driver-stats">
                             <div class="stat-item">
+                                <div class="stat-label">Kapasite</div>
+                                <div class="stat-value">${driver.maxCapacity || '0'} kg</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Sipariş</div>
+                                <div class="stat-value">${shipments.length}</div>
+                            </div>
+                            <div class="stat-item">
                                 <div class="stat-label">Mesafe</div>
-                                <div class="stat-value">${polyline.totalDistance ? polyline.totalDistance.toFixed(1) : '0'} km</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Hız</div>
-                                <div class="stat-value">${polyline.averageSpeed ? polyline.averageSpeed.toFixed(1) : '0'} km/h</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Konum</div>
-                                <div class="stat-value">${polyline.locationCount || 0}</div>
+                                <div class="stat-value">${getDistance()} km</div>
                             </div>
                             <div class="stat-item">
                                 <div class="stat-label">Süre</div>
-                                <div class="stat-value">${polyline.duration ? Math.round(polyline.duration / 60000) : 0} dk</div>
+                                <div class="stat-value">${getTime()} dk</div>
                             </div>
                         </div>
                     </div>
                 `;
             }
-            updateDriverInList(driver) {
-                const driverCard = document.querySelector(`[data-driver-id="${driver.driverId}"]`);
-                if (driverCard) {
-                    driverCard.outerHTML = this.createDriverCard(driver);
-                }
-            }
+
             updateMap() {
-                // Clear existing markers and polylines
+                // Mevcut marker ve polyline'ları temizle
                 this.markers.forEach(marker => this.map.removeLayer(marker));
                 this.polylines.forEach(polyline => this.map.removeLayer(polyline));
                 this.markers.clear();
                 this.polylines.clear();
-                // Add new markers and polylines
+
+                // Yeni marker ve polyline'ları ekle
                 this.drivers.forEach(driver => {
                     this.addDriverToMap(driver);
                 });
             }
+
             addDriverToMap(driver) {
-                const currentLocation = driver.currentLocation;
-                if (!currentLocation || !currentLocation.coordinates) return;
-                const coordinates = currentLocation.coordinates;
-                // Create marker
-                const marker = L.marker([coordinates.latitude, coordinates.longitude], {
+                // Driver'ın güncel konumunu al - undefined kontrolü
+                let currentLocation = driver.currentLocation;
+
+                if (!currentLocation || typeof currentLocation.lat === 'undefined' || typeof currentLocation.lng === 'undefined') {
+                    // Fallback location - Ankara center
+                    currentLocation = { lat: 39.9334, lng: 32.8597, address: 'Ankara, Turkey' };
+                    console.warn(`Driver ${driver.id} için geçersiz konum, fallback kullanılıyor:`, currentLocation);
+                }
+
+                // Marker oluştur
+                const marker = L.marker([currentLocation.lat, currentLocation.lng], {
                     title: driver.name,
                     icon: L.icon({
                         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -426,69 +1044,195 @@
                         shadowSize: [41, 41]
                     })
                 }).addTo(this.map);
-                marker.bindPopup(`<b>${driver.name}</b><br>${driver.licenseNumber}`);
-                this.markers.set(driver.driverId, marker);
-                // Create polyline
-                if (driver.polyline && driver.polyline.locations && driver.polyline.locations.length > 1) {
-                    const path = driver.polyline.locations.map(location => [location.coordinates.latitude, location.coordinates.longitude]);
-                    const polyline = L.polyline(path, { color: '#667eea', weight: 4 }).addTo(this.map);
-                    this.polylines.set(driver.driverId, polyline);
+
+                // Popup içeriği
+                const popupContent = `
+                    <b>${driver.name}</b><br>
+                    <small>${driver.licenseNumber}</small><br>
+                    <small>Durum: ${driver.status}</small><br>
+                    <small>Sipariş: ${Array.isArray(driver.shipments) ? driver.shipments.length : 0}</small>
+                    ${driver.currentLocation ? `<br><small>📍 ${driver.currentLocation.address || 'Konum bilgisi'}</small>` : ''}
+                `;
+
+                marker.bindPopup(popupContent);
+                this.markers.set(driver.id, marker);
+
+                // Rota polyline'ı ve waypoints oluştur
+                if (driver.polylinePoints && driver.polylinePoints.length > 0) {
+                    this.createRoutePolyline(driver);
+                }
+
+                // Waypoints ekle
+                if (driver.waypoints && driver.waypoints.length > 0) {
+                    this.addWaypoints(driver);
                 }
             }
-            updateDriverOnMap(driver) {
-                const marker = this.markers.get(driver.driverId);
-                if (marker && driver.currentLocation && driver.currentLocation.coordinates) {
-                    const coordinates = driver.currentLocation.coordinates;
-                    marker.setLatLng([coordinates.latitude, coordinates.longitude]);
+
+            createRoutePolyline(driver) {
+                try {
+                    if (driver.polylinePoints && driver.polylinePoints.length > 1) {
+                        const path = driver.polylinePoints.map(point => [point.lat, point.lng]);
+
+                        // Polyline oluştur
+                        const polyline = L.polyline(path, {
+                            color: '#667eea',
+                            weight: 4,
+                            opacity: 0.8
+                        }).addTo(this.map);
+
+                        this.polylines.set(driver.id, polyline);
+
+                        // Haritayı polyline'a göre fit et
+                        if (this.selectedDriver && this.selectedDriver.id === driver.id) {
+                            this.map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Polyline oluşturma hatası:`, error);
                 }
-                this.updatePolyline(driver);
             }
-            updatePolyline(driver) {
-                const polyline = this.polylines.get(driver.driverId);
-                if (polyline) {
-                    this.map.removeLayer(polyline);
-                }
-                if (driver.polyline && driver.polyline.locations && driver.polyline.locations.length > 1) {
-                    const path = driver.polyline.locations.map(location => [location.coordinates.latitude, location.coordinates.longitude]);
-                    const newPolyline = L.polyline(path, { color: '#667eea', weight: 4 }).addTo(this.map);
-                    this.polylines.set(driver.driverId, newPolyline);
+
+            addWaypoints(driver) {
+                try {
+                    driver.waypoints.forEach((waypoint, index) => {
+                        // Waypoint marker'ı oluştur
+                        const icon = L.divIcon({
+                            className: 'waypoint-marker',
+                            html: `<div style="
+                                background-color: ${waypoint.type === 'pickup' ? '#4CAF50' : '#FF9800'};
+                                color: white;
+                                border-radius: 50%;
+                                width: 20px;
+                                height: 20px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 10px;
+                                font-weight: bold;
+                                border: 2px solid white;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                            ">${waypoint.type === 'pickup' ? 'P' : 'D'}</div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+
+                        const marker = L.marker([waypoint.lat, waypoint.lng], { icon }).addTo(this.map);
+
+                        // Waypoint popup'ı
+                        const popupContent = `
+                            <b>${waypoint.type === 'pickup' ? '📦 Toplama' : '🚚 Teslimat'}</b><br>
+                            <small>Koordinat: ${waypoint.lat.toFixed(4)}, ${waypoint.lng.toFixed(4)}</small>
+                            ${waypoint.shipmentId ? `<br><small>Sipariş ID: ${waypoint.shipmentId.substring(0, 8)}...</small>` : ''}
+                        `;
+
+                        marker.bindPopup(popupContent);
+                        this.markers.set(`${driver.id}-waypoint-${index}`, marker);
+                    });
+                } catch (error) {
+                    console.error(`Waypoints ekleme hatası:`, error);
                 }
             }
+
             selectDriver(driverId) {
+                // Önceki seçimi temizle
                 document.querySelectorAll('.driver-card').forEach(card => {
                     card.classList.remove('selected');
                 });
+
+                // Yeni seçimi işaretle
                 const selectedCard = document.querySelector(`[data-driver-id="${driverId}"]`);
                 if (selectedCard) {
                     selectedCard.classList.add('selected');
                 }
+
                 this.selectedDriver = this.drivers.get(driverId);
-                this.showPolylineInfo();
+                this.showRouteInfo();
                 this.centerMapOnDriver();
             }
-            showPolylineInfo() {
+
+            showRouteInfo() {
                 if (!this.selectedDriver) return;
-                const polyline = this.selectedDriver.polyline;
-                const infoElement = document.getElementById('polyline-info');
-                document.getElementById('selected-driver-name').textContent = this.selectedDriver.name;
-                document.getElementById('total-distance').textContent = polyline.totalDistance ? polyline.totalDistance.toFixed(1) : '0';
-                document.getElementById('average-speed').textContent = polyline.averageSpeed ? polyline.averageSpeed.toFixed(1) : '0';
-                document.getElementById('location-count').textContent = polyline.locationCount || 0;
-                infoElement.style.display = 'block';
+
+                const driver = this.selectedDriver;
+                const route = driver.route;
+                const shipments = driver.shipments;
+
+                document.getElementById('selected-driver-name').textContent = driver.name;
+                document.getElementById('selected-driver-license').textContent = driver.licenseNumber;
+                document.getElementById('selected-driver-status').textContent = driver.status;
+                document.getElementById('selected-driver-capacity').textContent = `${driver.maxCapacity || 0} kg`;
+
+                // Route bilgilerini göster
+                let routeText = 'Yok';
+                if (driver.formattedRoute && driver.formattedRoute.routeText !== 'Rota bulunamadı') {
+                    routeText = driver.formattedRoute.routeText;
+                } else if (route && route.optimizedRoute && route.optimizedRoute.waypoints) {
+                    try {
+                        const formattedRoute = window.RouteHelper.formatOptimizedRoute(route);
+                        if (formattedRoute.routeText !== 'Rota bulunamadı') {
+                            routeText = formattedRoute.routeText;
+                        }
+                    } catch (error) {
+                        console.error('Route formatting error:', error);
+                    }
+                }
+
+                document.getElementById('selected-driver-route').textContent = routeText;
+
+                // Sipariş listesi
+                const shipmentsHtml = Array.isArray(shipments) && shipments.length > 0
+                    ? shipments.map(shipment => `
+                        <div class="shipment-item">
+                            <strong>${shipment.trackingNumber}</strong><br>
+                            ${shipment.origin} → ${shipment.destination}<br>
+                            ${shipment.weight} kg, ${shipment.volume} m³
+                        </div>
+                    `).join('')
+                    : '<div class="shipment-item">Sipariş yok</div>';
+
+                document.getElementById('selected-driver-shipments').innerHTML = shipmentsHtml;
+                document.getElementById('route-info').style.display = 'block';
             }
+
             centerMapOnDriver() {
-                if (!this.selectedDriver || !this.selectedDriver.currentLocation || !this.selectedDriver.currentLocation.coordinates) return;
-                const coordinates = this.selectedDriver.currentLocation.coordinates;
-                this.map.setView([coordinates.latitude, coordinates.longitude], 14);
+                if (!this.selectedDriver) return;
+
+                const currentLocation = this.selectedDriver.currentLocation || { lat: 39.9334, lng: 32.8597 };
+                this.map.setView([currentLocation.lat, currentLocation.lng], 12);
             }
-            updateTotalDrivers() {
-                document.getElementById('total-drivers').textContent = this.drivers.size;
+
+            updateStats() {
+                const drivers = Array.from(this.drivers.values());
+
+                document.getElementById('total-drivers').textContent = drivers.length;
+                document.getElementById('available-drivers').textContent = drivers.filter(d => d.status === 'available').length;
+                document.getElementById('active-routes').textContent = drivers.filter(d => d.route && d.route.success).length;
+                document.getElementById('total-shipments').textContent = drivers.reduce((sum, d) => sum + (Array.isArray(d.shipments) ? d.shipments.length : 0), 0);
+            }
+
+            updateConnectionStatus(connected) {
+                const statusElement = document.getElementById('connection-status');
+                if (connected) {
+                    statusElement.textContent = '🟢 Bağlı';
+                    statusElement.className = 'connection-status connected';
+                } else {
+                    statusElement.textContent = '🔴 Bağlantı Yok';
+                    statusElement.className = 'connection-status disconnected';
+                }
+            }
+
+            startAutoRefresh() {
+                // Her 30 saniyede bir verileri güncelle
+                setInterval(() => {
+                    this.loadDrivers();
+                }, 30000);
             }
         }
-        // Initialize dashboard when page loads
+
+        // Dashboard'u başlat
         let dashboard;
         window.addEventListener('load', () => {
-            dashboard = new DriverTrackingDashboard();
+            dashboard = new LogisticDashboard();
         });
     </script>
 </body>

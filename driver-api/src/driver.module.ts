@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 // Domain Entities
 import { Driver } from './domain/entities/driver.entity';
@@ -11,6 +12,10 @@ import { DriverAssignment } from './domain/entities/driver-assignment.entity';
 import { Shipment } from './domain/entities/shipment.entity';
 import { DriverRoute } from './domain/entities/driver-route.entity';
 import { OutboxEvent } from './domain/entities/outbox-event.entity';
+
+// Shared Entities
+// import { OptimizedRoute } from '../../shared/entities/optimized-route.entity';
+// import { RouteGeometry } from '../../shared/entities/route-geometry.entity';
 
 // Infrastructure Repositories
 import { TypeOrmDriverRepository } from './infrastructure/repositories/typeorm-driver.repository';
@@ -28,6 +33,7 @@ import { AssignShipmentCommand } from './application/commands/assign-shipment.co
 // Application Queries
 import { GetDriversQuery } from './application/queries/get-drivers.query';
 import { GetDriverShipmentsQuery } from './application/queries/get-driver-shipments.query';
+import { GetDriverByIdQuery } from './application/queries/get-driver-by-id.query';
 
 // Application Handlers
 import { CreateDriverHandler } from './application/handlers/create-driver.handler';
@@ -35,20 +41,28 @@ import { UpdateDriverLocationHandler } from './application/handlers/update-drive
 import { AssignShipmentHandler } from './application/handlers/assign-shipment.handler';
 import { GetDriversHandler } from './application/handlers/get-drivers.handler';
 import { GetDriverShipmentsHandler } from './application/handlers/get-driver-shipments.handler';
+import { GetDriverByIdHandler } from './application/handlers/get-driver-by-id.handler';
 
 // Infrastructure Services
 import { OutboxProcessorService } from './infrastructure/outbox/outbox-processor.service';
 import { RabbitMQService } from './infrastructure/rabbitmq/rabbitmq.service';
 import { RedisService } from './infrastructure/redis/redis.service';
+// import { EnhancedRedisService } from '../../shared/infrastructure/enhanced-redis.service';
+// import { EnhancedOutboxProcessorService } from '../../shared/outbox/enhanced-outbox-processor.service';
+// import { GeometryService } from '../../shared/services/geometry.service';
 
 // Common Services
 import { CustomLogger } from './common/logger/logger.service';
 import { RouteService } from './services/route.service';
 import { CapacityService } from './services/capacity.service';
+import { DriverService } from './services/driver.service';
+// import { LocationService } from './services/location.service';
+// import { GeofencingService } from './services/geofencing.service';
 
 // Controllers
 import { DriverController } from './controllers/driver.controller';
 import { RouteController } from './controllers/route.controller';
+// import { LocationController } from './controllers/location.controller';
 import { AuthController } from './auth/auth.controller';
 import { HealthController } from './common/health/health.controller';
 import { AuthService } from './auth/auth.service';
@@ -67,6 +81,7 @@ const CommandHandlers = [
 const QueryHandlers = [
     GetDriversHandler,
     GetDriverShipmentsHandler,
+    GetDriverByIdHandler,
 ];
 
 const EventHandlers: any[] = [];
@@ -74,6 +89,7 @@ const EventHandlers: any[] = [];
 @Module({
     imports: [
         ConfigModule.forRoot(),
+        EventEmitterModule.forRoot(),
         TypeOrmModule.forRoot({
             type: 'postgres',
             host: process.env.DB_HOST || 'postgres',
@@ -82,7 +98,7 @@ const EventHandlers: any[] = [];
             password: process.env.DB_PASSWORD || 'postgres',
             database: process.env.DB_NAME || 'driver_db',
             entities: [Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent],
-            synchronize: process.env.NODE_ENV !== 'production',
+            synchronize: false,
             logging: process.env.NODE_ENV === 'development',
         }),
         TypeOrmModule.forFeature([Driver, DriverLocation, DriverAssignment, Shipment, DriverRoute, OutboxEvent]),
@@ -95,6 +111,7 @@ const EventHandlers: any[] = [];
     controllers: [
         DriverController,
         RouteController,
+        // LocationController,
         AuthController,
         HealthController,
     ],
@@ -112,10 +129,16 @@ const EventHandlers: any[] = [];
 
         // Services
         OutboxProcessorService,
+        // EnhancedOutboxProcessorService,
         RabbitMQService,
         RedisService,
+        // EnhancedRedisService,
         RouteService,
         CapacityService,
+        DriverService,
+        // LocationService,
+        // GeofencingService,
+        // GeometryService,
         AuthService,
         JwtStrategy,
 
